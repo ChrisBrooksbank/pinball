@@ -6,7 +6,12 @@ import {
     type Segment,
     type SweepHit,
 } from './collision';
-import { createMaterials, type Materials, type SurfaceType } from './materials';
+import {
+    createMaterials,
+    type Materials,
+    type SurfaceMaterial,
+    type SurfaceType,
+} from './materials';
 import { add, scale, vec2, type Vec2 } from './vec2';
 
 /** Standard gravity in m/s^2. */
@@ -30,6 +35,26 @@ interface WallArc extends Arc {
 const MAX_CONTACTS_PER_STEP = 4;
 /** Gap left between ball and surface after a hit (metres). */
 const CONTACT_SKIN = 1e-7;
+
+/**
+ * Tangential losses on contact: Coulomb friction (bounded by mu * normal impulse, so it can
+ * stop but never reverse the slide) plus rolling damping over the step.
+ */
+function applyContactLoss(
+    vel: Vec2,
+    normal: Vec2,
+    vnBefore: number,
+    mat: SurfaceMaterial,
+    dt: number
+): Vec2 {
+    const tangent = vec2(-normal.y, normal.x);
+    const vt = vel.x * tangent.x + vel.y * tangent.y;
+    if (vt === 0) return vel;
+    const normalImpulse = (1 + mat.restitution) * -vnBefore;
+    const afterFriction = Math.sign(vt) * Math.max(0, Math.abs(vt) - mat.friction * normalImpulse);
+    const vtNew = afterFriction * Math.max(0, 1 - mat.rollingDamping * dt);
+    return add(vel, scale(tangent, vtNew - vt));
+}
 
 interface WorldConfig {
     /** Playfield tilt from horizontal, in degrees. */
@@ -119,8 +144,9 @@ export class World {
             ball.pos = add(add(ball.pos, scale(d, best.t)), scale(best.normal, CONTACT_SKIN));
             const vn = ball.vel.x * best.normal.x + ball.vel.y * best.normal.y;
             if (vn < 0) {
-                const e = this.materials[bestSurface].restitution;
-                ball.vel = add(ball.vel, scale(best.normal, -(1 + e) * vn));
+                const mat = this.materials[bestSurface];
+                ball.vel = add(ball.vel, scale(best.normal, -(1 + mat.restitution) * vn));
+                ball.vel = applyContactLoss(ball.vel, best.normal, vn, mat, dt);
             }
             remaining *= 1 - best.t;
         }

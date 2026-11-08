@@ -47,6 +47,49 @@ describe('World', () => {
         expect(ball.vel.x).toBeCloseTo(-2 * world.materials.rubber.restitution, 9);
     });
 
+    it('applies Coulomb friction to the tangential speed on impact', () => {
+        const world = new World({ tiltDegrees: 0 });
+        world.addSegment(vec2(1, -1), vec2(1, 1), 'rubber');
+        const m = world.materials.rubber;
+        m.rollingDamping = 0;
+        const ball = world.addBall(vec2(0.9, 0), vec2(2, 5));
+        for (let i = 0; i < 100; i++) world.step(0.001);
+        const impulse = (1 + m.restitution) * 2;
+        expect(ball.vel.x).toBeCloseTo(-2 * m.restitution, 9);
+        expect(ball.vel.y).toBeCloseTo(5 - m.friction * impulse, 9);
+    });
+
+    it('friction never reverses the tangential slide', () => {
+        const world = new World({ tiltDegrees: 0 });
+        world.addSegment(vec2(1, -1), vec2(1, 1), 'rubber');
+        world.materials.rubber.friction = 10;
+        const ball = world.addBall(vec2(0.9, 0), vec2(2, 0.1));
+        for (let i = 0; i < 100; i++) world.step(0.001);
+        expect(ball.vel.y).toBeCloseTo(0, 9);
+    });
+
+    it('applies rolling damping to tangential speed on contact', () => {
+        const world = new World({ tiltDegrees: 0 });
+        world.addSegment(vec2(1, -1), vec2(1, 1));
+        const m = world.materials.wall;
+        m.friction = 0;
+        m.rollingDamping = 50;
+        const ball = world.addBall(vec2(0.9, 0), vec2(2, 1));
+        for (let i = 0; i < 100; i++) world.step(0.001);
+        expect(ball.vel.y).toBeCloseTo(1 - 50 * 0.001, 9);
+    });
+
+    it('resolves a ball wedged in a corner without escaping or exploding', () => {
+        const world = new World({ tiltDegrees: 0 });
+        world.addSegment(vec2(1, -1), vec2(1, 1));
+        world.addSegment(vec2(-1, 1), vec2(1, 1));
+        const ball = world.addBall(vec2(0.9, 0.9), vec2(30, 30));
+        for (let i = 0; i < 200; i++) world.step(0.001);
+        expect(ball.pos.x).toBeLessThan(1);
+        expect(ball.pos.y).toBeLessThan(1);
+        expect(Math.hypot(ball.vel.x, ball.vel.y)).toBeLessThan(43);
+    });
+
     it('does not tunnel through a wall at 10x normal speed', () => {
         const world = new World({ tiltDegrees: 0 });
         world.addSegment(vec2(-1, 0.5), vec2(1, 0.5)); // horizontal wall at y=0.5
