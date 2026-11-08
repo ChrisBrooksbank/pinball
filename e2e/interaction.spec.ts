@@ -28,3 +28,39 @@ test.describe('Core interactions', () => {
         expect(errors).toEqual([]);
     });
 });
+
+test.describe('Flipper input', () => {
+    test('flipper key triggers the flipper action', async ({ page }) => {
+        await page.goto('/');
+        const canvas = page.locator('canvas#game');
+        await page.keyboard.down('ShiftLeft');
+        await expect(canvas).toHaveAttribute('data-flipper-left', 'down');
+        await page.keyboard.up('ShiftLeft');
+        await expect(canvas).toHaveAttribute('data-flipper-left', 'up');
+    });
+
+    test('touching the flipper zone triggers the flipper action', async ({ page }) => {
+        await page.goto('/');
+        const canvas = page.locator('canvas#game');
+        const touch = (type: string, xFrac: number) =>
+            canvas.evaluate(
+                (el, [t, x]) => {
+                    const r = el.getBoundingClientRect();
+                    el.dispatchEvent(
+                        new PointerEvent(t as string, {
+                            pointerId: 7,
+                            pointerType: 'touch',
+                            clientX: r.left + r.width * (x as number),
+                            clientY: r.top + r.height * 0.8,
+                            bubbles: true,
+                        })
+                    );
+                },
+                [type, xFrac]
+            );
+        await touch('pointerdown', 0.75);
+        await expect(canvas).toHaveAttribute('data-flipper-right', 'down');
+        await touch('pointerup', 0.75);
+        await expect(canvas).toHaveAttribute('data-flipper-right', 'up');
+    });
+});

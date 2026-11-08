@@ -47,6 +47,7 @@ status.style.cssText =
 document.body.appendChild(status);
 
 const actions = new ActionState((action, down) => {
+    canvas.dataset[action] = down ? 'down' : 'up'; // observable by e2e tests
     if (action === 'flipperLeft') sandbox.left.setHeld(down);
     else if (action === 'flipperRight') sandbox.right.setHeld(down);
     else if (action === 'plunger') {
