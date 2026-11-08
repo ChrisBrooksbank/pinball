@@ -5,6 +5,7 @@ import { TableSim } from '@physics/table-sim';
 import { applyCameraFraming } from '@render/camera';
 import { createChromeEnvironment } from '@render/environment';
 import { createPostProcessing } from '@render/post';
+import { chooseRenderQuality } from '@render/quality';
 import { buildTableScene } from '@render/scene';
 import { PLAYFIELD } from '@/table/playfield';
 
@@ -13,7 +14,11 @@ if (!(canvas instanceof HTMLCanvasElement)) {
     throw new Error('Canvas #game not found');
 }
 
-const renderer = new WebGLRenderer({ canvas, antialias: true });
+const quality = chooseRenderQuality({
+    devicePixelRatio: window.devicePixelRatio,
+    coarsePointer: window.matchMedia('(pointer: coarse)').matches,
+});
+const renderer = new WebGLRenderer({ canvas, antialias: quality.antialias });
 renderer.toneMapping = ACESFilmicToneMapping;
 const scene = new Scene();
 scene.environment = createChromeEnvironment(renderer);
@@ -49,10 +54,10 @@ window.addEventListener('keyup', e => onKey(false, e));
 
 function resize(): void {
     const { clientWidth: w, clientHeight: h } = canvas as HTMLCanvasElement;
-    const pixelRatio = Math.min(window.devicePixelRatio, 2);
+    const { pixelRatio, bloomScale } = quality;
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(w, h, false);
-    post.setSize(w, h, pixelRatio);
+    post.setSize(w, h, pixelRatio, bloomScale);
     applyCameraFraming(camera, w / h, PLAYFIELD.bounds);
 }
 window.addEventListener('resize', resize);

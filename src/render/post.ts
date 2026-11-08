@@ -8,7 +8,7 @@ import { BLOOM } from './palette';
 
 interface PostProcessing {
     render(): void;
-    setSize(width: number, height: number, pixelRatio: number): void;
+    setSize(width: number, height: number, pixelRatio: number, bloomScale?: number): void;
 }
 
 /** Bloom post-processing chain: scene render, bloom on bright emissives, tone-mapped output. */
@@ -19,15 +19,24 @@ export function createPostProcessing(
 ): PostProcessing {
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
-    composer.addPass(
-        new UnrealBloomPass(new Vector2(1, 1), BLOOM.strength, BLOOM.radius, BLOOM.threshold)
+    const bloom = new UnrealBloomPass(
+        new Vector2(1, 1),
+        BLOOM.strength,
+        BLOOM.radius,
+        BLOOM.threshold
     );
+    composer.addPass(bloom);
     composer.addPass(new OutputPass());
     return {
         render: () => composer.render(),
-        setSize: (width, height, pixelRatio) => {
+        setSize: (width, height, pixelRatio, bloomScale = 1) => {
             composer.setPixelRatio(pixelRatio);
             composer.setSize(width, height);
+            // Bloom is blurry by nature; running it at reduced resolution saves fill rate.
+            bloom.setSize(
+                Math.max(1, Math.floor(width * pixelRatio * bloomScale)),
+                Math.max(1, Math.floor(height * pixelRatio * bloomScale))
+            );
         },
     };
 }
