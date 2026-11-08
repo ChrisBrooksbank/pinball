@@ -36,6 +36,11 @@ interface WallArc extends Arc {
 const MAX_CONTACTS_PER_STEP = 4;
 /** Gap left between ball and surface after a hit (metres). */
 const CONTACT_SKIN = 1e-7;
+/**
+ * Approach speeds below this (m/s) are treated as resting contact: no bounce, so a ball settles
+ * on a surface without jitter and friction is not inflated by the restitution term.
+ */
+const RESTING_SPEED = 0.1;
 
 /**
  * Tangential losses on contact: Coulomb friction (bounded by mu * normal impulse, so it can
@@ -45,13 +50,14 @@ function applyContactLoss(
     vel: Vec2,
     normal: Vec2,
     vnBefore: number,
+    restitution: number,
     mat: SurfaceMaterial,
     dt: number
 ): Vec2 {
     const tangent = vec2(-normal.y, normal.x);
     const vt = vel.x * tangent.x + vel.y * tangent.y;
     if (vt === 0) return vel;
-    const normalImpulse = (1 + mat.restitution) * -vnBefore;
+    const normalImpulse = (1 + restitution) * -vnBefore;
     const afterFriction = Math.sign(vt) * Math.max(0, Math.abs(vt) - mat.friction * normalImpulse);
     const vtNew = afterFriction * Math.max(0, 1 - mat.rollingDamping * dt);
     return add(vel, scale(tangent, vtNew - vt));
@@ -209,8 +215,10 @@ export class World {
         const rel = vec2(ball.vel.x - surfaceVel.x, ball.vel.y - surfaceVel.y);
         const vn = rel.x * normal.x + rel.y * normal.y;
         if (vn >= 0) return;
-        const bounced = add(rel, scale(normal, -(1 + mat.restitution) * vn));
-        const lossy = applyContactLoss(bounced, normal, vn, mat, dt);
+        const resting = -vn < RESTING_SPEED;
+        const restitution = resting ? 0 : mat.restitution;
+        const bounced = add(rel, scale(normal, -(1 + restitution) * vn));
+        const lossy = applyContactLoss(bounced, normal, vn, restitution, mat, dt);
         ball.vel = add(lossy, surfaceVel);
     }
 }

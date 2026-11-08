@@ -116,3 +116,48 @@ describe('Flipper', () => {
         expect(f.angularVelocity).toBeLessThan(0);
     });
 });
+
+/** Raised flipper with a back wall behind the pivot and a ball dropped onto it. */
+function cradleSetup(): { world: World; flipper: Flipper; ball: ReturnType<World['addBall']> } {
+    const world = new World();
+    const flipper = world.addFlipper(config);
+    flipper.setHeld(true);
+    for (let i = 0; i < 100; i++) world.step(DT);
+    world.addSegment(vec2(0.085, 0.4), vec2(0.085, 0.6));
+    const ball = world.addBall(vec2(0.14, 0.44), vec2(0.3, 0.5));
+    return { world, flipper, ball };
+}
+
+describe('Flipper cradle', () => {
+    it('traps a ball on a raised flipper without jitter', () => {
+        const { world, ball } = cradleSetup();
+        for (let i = 0; i < 1500; i++) world.step(DT);
+        const settled = { x: ball.pos.x, y: ball.pos.y };
+        let maxSpeed = 0;
+        let maxDrift = 0;
+        for (let i = 0; i < 500; i++) {
+            world.step(DT);
+            maxSpeed = Math.max(maxSpeed, Math.hypot(ball.vel.x, ball.vel.y));
+            maxDrift = Math.max(
+                maxDrift,
+                Math.hypot(ball.pos.x - settled.x, ball.pos.y - settled.y)
+            );
+        }
+        expect(maxSpeed).toBeLessThan(0.05);
+        expect(maxDrift).toBeLessThan(0.002);
+    });
+});
+
+describe('Flipper flick-pass', () => {
+    it('releases a cradled ball off the flipper end when the flipper drops', () => {
+        const { world, flipper, ball } = cradleSetup();
+        // Low-grip flipper rubber so the ball rolls off the end instead of sticking on the cap.
+        world.materials.flipper.friction = 0.2;
+        for (let i = 0; i < 1500; i++) world.step(DT);
+        flipper.setHeld(false);
+        for (let i = 0; i < 1000; i++) world.step(DT);
+        // Ball rolls down the lowered flipper and leaves past the tip, travelling toward the centre.
+        expect(ball.pos.x).toBeGreaterThan(flipper.tip.x);
+        expect(ball.vel.x).toBeGreaterThan(0);
+    });
+});
