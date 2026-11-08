@@ -12,15 +12,20 @@ import {
     PointLight,
     SphereGeometry,
 } from 'three';
+import { LampBank } from '@core/lamps';
 import type { TableSim } from '@physics/table-sim';
 import type { Vec2 } from '@physics/vec2';
 import { PALETTE } from './palette';
 
+const LAMP_ON = 2.2;
+const LAMP_OFF = 0.08;
 const ARC_SEGMENT_ANGLE = Math.PI / 24;
 
 interface TableScene {
     /** Root group containing every table mesh and the lights. */
     readonly root: Group;
+    /** Insert lights by table lamp id; call `lamps.update(dt)` each frame, then `sync()`. */
+    readonly lamps: LampBank;
     /** Copy dynamic physics state (flippers, plunger, balls) onto the meshes. */
     sync(): void;
 }
@@ -47,16 +52,6 @@ export function buildTableScene(sim: TableSim): TableScene {
         }
         return geometry as G;
     };
-    const lampMaterials = new Map<string, MeshStandardMaterial>();
-    const lampMaterial = (color: string): MeshStandardMaterial => {
-        let material = lampMaterials.get(color);
-        if (!material) {
-            material = new MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.5 });
-            lampMaterials.set(color, material);
-        }
-        return material;
-    };
-
     const chrome = new MeshStandardMaterial({
         color: PALETTE.chrome,
         metalness: 1,
@@ -141,10 +136,31 @@ export function buildTableScene(sim: TableSim): TableScene {
     }
 
     const insertGeometry = new CircleGeometry(0.01, 16);
+    const lamps = new LampBank(table.lamps.map(l => l.id));
+    // Two shared materials (lit/unlit) per colour; inserts swap between them.
+    const lampMaterialCache = new Map<
+        string,
+        { lit: MeshStandardMaterial; unlit: MeshStandardMaterial }
+    >();
+    const lampMaterialsFor = (
+        color: string
+    ): { lit: MeshStandardMaterial; unlit: MeshStandardMaterial } => {
+        let pair = lampMaterialCache.get(color);
+        if (!pair) {
+            const make = (emissiveIntensity: number): MeshStandardMaterial =>
+                new MeshStandardMaterial({ color, emissive: color, emissiveIntensity });
+            pair = { lit: make(LAMP_ON), unlit: make(LAMP_OFF) };
+            lampMaterialCache.set(color, pair);
+        }
+        return pair;
+    };
+    const lampMeshes = new Map<string, Mesh>();
     for (const lamp of table.lamps) {
-        const mesh = new Mesh(insertGeometry, lampMaterial(lamp.color));
+        const material = lampMaterialsFor(lamp.color).unlit;
+        const mesh = new Mesh(insertGeometry, material);
         mesh.rotation.x = -Math.PI / 2;
         place(mesh, lamp.pos.x, lamp.pos.y, 0.001);
+        lampMeshes.set(lamp.id, mesh);
         root.add(mesh);
     }
 
@@ -171,6 +187,11 @@ export function buildTableScene(sim: TableSim): TableScene {
     root.add(light);
 
     const sync = (): void => {
+        for (const lamp of table.lamps) {
+            const pair = lampMaterialsFor(lamp.color);
+            const mesh = lampMeshes.get(lamp.id);
+            if (mesh) mesh.material = lamps.lit(lamp.id) ? pair.lit : pair.unlit;
+        }
         world.flippers.forEach((flipper, i) => {
             const mesh = flipperMeshes[i];
             if (!mesh) return;
@@ -198,5 +219,5 @@ export function buildTableScene(sim: TableSim): TableScene {
     };
     sync();
 
-    return { root, sync };
+    return { root, lamps, sync };
 }

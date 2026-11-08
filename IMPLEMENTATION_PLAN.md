@@ -61,7 +61,7 @@ Every spec requirement is unimplemented.
 - [x] `src/render` scene builder from table definition: playfield, walls, chrome rails, bumpers, targets, flippers synced to physics state (spec: table-layout.md)
 - [x] Shared geometry/material cache for repeated parts (spec: table-layout.md)
 - [x] Retro look: neon palette on dark playfield, emissive inserts, environment-map chrome ball, bloom post-processing (spec: table-layout.md)
-- [ ] Lamp system: lamp ids from table, API on/off/flash (pure state + render binding); unit test for flash timing (spec: table-layout.md)
+- [x] Lamp system: lamp ids from table, API on/off/flash (pure state + render binding); unit test for flash timing (spec: table-layout.md)
 - [ ] Backglass mesh (placeholder texture until DMD exists) (spec: table-layout.md)
 - [ ] Responsive fixed camera: portrait mobile vs landscape desktop framing (spec: table-layout.md)
 - [ ] Performance pass: pixel ratio cap, bloom cost on mobile, draw-call check (spec: table-layout.md)

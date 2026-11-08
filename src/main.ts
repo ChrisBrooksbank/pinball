@@ -69,6 +69,7 @@ renderer.setAnimationLoop(now => {
         sandbox.step(1 / 1000);
     });
     sandbox.world.events.drain();
+    tableScene.lamps.update(frame);
     tableScene.sync();
     debugPanel.update();
     post.render();

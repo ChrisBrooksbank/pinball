@@ -57,3 +57,29 @@ describe('retro look', () => {
         expect(ball).toBeDefined();
     });
 });
+
+describe('lamps', () => {
+    it('drives insert emissive intensity from lamp state', () => {
+        const sim = new TableSim(PLAYFIELD);
+        const scene = buildTableScene(sim);
+        const id = PLAYFIELD.lamps[0]!.id;
+        const intensityOf = (): number => {
+            const lamp = PLAYFIELD.lamps[0]!;
+            const mesh = scene.root.children.find(
+                (c): c is Mesh =>
+                    c instanceof Mesh &&
+                    c.position.x === lamp.pos.x - PLAYFIELD.bounds.width / 2 &&
+                    c.position.z === lamp.pos.y - PLAYFIELD.bounds.height / 2 &&
+                    c.position.y === 0.001
+            );
+            return (mesh!.material as MeshStandardMaterial).emissiveIntensity;
+        };
+        const off = intensityOf();
+        scene.lamps.on(id);
+        scene.sync();
+        expect(intensityOf()).toBeGreaterThan(off);
+        scene.lamps.off(id);
+        scene.sync();
+        expect(intensityOf()).toBe(off);
+    });
+});
