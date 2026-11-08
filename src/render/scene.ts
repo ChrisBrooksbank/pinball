@@ -21,6 +21,7 @@ import {
 import { LampBank } from '@core/lamps';
 import type { TableSim } from '@physics/table-sim';
 import type { Vec2 } from '@physics/vec2';
+import { createPlayfieldTexture } from './artwork';
 import { PALETTE } from './palette';
 
 const LAMP_ON = 2.2;
@@ -112,9 +113,15 @@ export function buildTableScene(sim: TableSim): TableScene {
         emissiveIntensity: 1.4,
     });
 
+    // Artwork carries its own colours; fall back to the flat dark colour where no canvas exists.
+    const artwork = createPlayfieldTexture(table);
     const playfield = new Mesh(
         new PlaneGeometry(table.bounds.width, table.bounds.height),
-        new MeshStandardMaterial({ color: PALETTE.playfield, roughness: 0.5 })
+        new MeshStandardMaterial({
+            color: artwork ? 0xffffff : PALETTE.playfield,
+            roughness: 0.5,
+            map: artwork ?? null,
+        })
     );
     playfield.rotation.x = -Math.PI / 2;
     root.add(playfield);
