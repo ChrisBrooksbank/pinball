@@ -65,6 +65,43 @@ describe('World', () => {
         expect(ball.vel.y).toBeGreaterThan(0);
     });
 
+    it('keeps a ball inside a curved guide, even at 10x speed', () => {
+        const world = new World({ tiltDegrees: 0 });
+        // Full circle guide of radius 0.5; ball launched from the centre.
+        world.addArc(vec2(0, 0), 0.5, 0, Math.PI * 2);
+        const ball = world.addBall(vec2(0, 0), vec2(60, 25));
+        for (let i = 0; i < 500; i++) {
+            world.step(0.001);
+            expect(Math.hypot(ball.pos.x, ball.pos.y)).toBeLessThan(0.5);
+        }
+    });
+
+    it('bounces off the outside of an arc with the surface restitution', () => {
+        const world = new World({ tiltDegrees: 0 });
+        world.addArc(vec2(0, 0), 0.5, -Math.PI / 4, Math.PI / 2); // right-hand bulge around +x
+        const e = world.materials.wall.restitution;
+        const ball = world.addBall(vec2(1, 0), vec2(-100, 0));
+        for (let i = 0; i < 20; i++) world.step(0.001);
+        expect(ball.vel.x).toBeCloseTo(100 * e, 6);
+        expect(ball.pos.x).toBeGreaterThan(0.5);
+    });
+
+    it('passes by an arc outside its angular range', () => {
+        const world = new World({ tiltDegrees: 0 });
+        world.addArc(vec2(0, 0), 0.5, -Math.PI / 4, Math.PI / 2);
+        const ball = world.addBall(vec2(-1, 0), vec2(10, 0));
+        for (let i = 0; i < 20; i++) world.step(0.001);
+        expect(ball.vel.x).toBe(10);
+    });
+
+    it('deflects off an arc end cap', () => {
+        const world = new World({ tiltDegrees: 0 });
+        world.addArc(vec2(0, 0), 0.5, 0, Math.PI / 2); // ends at (0.5, 0) and (0, 0.5)
+        const ball = world.addBall(vec2(0.5, -0.5), vec2(0.1, 5));
+        for (let i = 0; i < 200; i++) world.step(0.001);
+        expect(ball.vel.y).toBeLessThan(5);
+    });
+
     it('reflects config changes made at runtime', () => {
         const world = new World();
         world.config.tiltDegrees = 10;

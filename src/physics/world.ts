@@ -1,5 +1,11 @@
 import { EventQueue } from './event-queue';
-import { sweepCircleSegment, type Segment, type SweepHit } from './collision';
+import {
+    sweepCircleArc,
+    sweepCircleSegment,
+    type Arc,
+    type Segment,
+    type SweepHit,
+} from './collision';
 import { createMaterials, type Materials, type SurfaceType } from './materials';
 import { add, scale, vec2, type Vec2 } from './vec2';
 
@@ -13,6 +19,10 @@ interface Ball {
 }
 
 interface WallSegment extends Segment {
+    surface: SurfaceType;
+}
+
+interface WallArc extends Arc {
     surface: SurfaceType;
 }
 
@@ -32,6 +42,7 @@ const DEFAULT_WORLD_CONFIG: WorldConfig = { tiltDegrees: 6.5 };
 export class World {
     readonly balls: Ball[] = [];
     readonly segments: WallSegment[] = [];
+    readonly arcs: WallArc[] = [];
     readonly config: WorldConfig;
     readonly events = new EventQueue();
     /** Per-surface material constants; mutable so a tuning panel can adjust them live. */
@@ -59,6 +70,18 @@ export class World {
         return wall;
     }
 
+    addArc(
+        center: Vec2,
+        radius: number,
+        startAngle: number,
+        sweepAngle: number,
+        surface: SurfaceType = 'wall'
+    ): WallArc {
+        const arc = { center, radius, startAngle, sweepAngle, surface };
+        this.arcs.push(arc);
+        return arc;
+    }
+
     /** Advance the simulation by `dt` seconds (semi-implicit Euler with swept segment collisions). */
     step(dt: number): void {
         const g = this.gravityAlongTable;
@@ -79,6 +102,13 @@ export class World {
                 if (hit && (!best || hit.t < best.t)) {
                     best = hit;
                     bestSurface = seg.surface;
+                }
+            }
+            for (const arc of this.arcs) {
+                const hit = sweepCircleArc(ball.pos, d, ball.radius, arc);
+                if (hit && (!best || hit.t < best.t)) {
+                    best = hit;
+                    bestSurface = arc.surface;
                 }
             }
             if (!best) {

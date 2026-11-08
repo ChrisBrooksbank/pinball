@@ -38,7 +38,7 @@ Every spec requirement is unimplemented.
 - [x] Typed physics event queue (`PhysicsEvent` union: bumperHit, targetHit, spinnerSpin, slingshot, drain, etc.) with push/drain API; types in shared module (spec: physics-feel.md)
 - [x] Material constants per surface type (restitution, friction, rolling damping) in a `materials` module, exposed as mutable tuning params (spec: physics-feel.md)
 - [x] Swept circle-vs-segment collision with restitution response; test wall bounce restitution (spec: physics-feel.md)
-- [ ] Swept circle-vs-arc (and endpoint/corner) collision; test curved guide, no tunnelling at 10x speed against segments and arcs (spec: physics-feel.md)
+- [x] Swept circle-vs-arc (and endpoint/corner) collision; test curved guide, no tunnelling at 10x speed against segments and arcs (spec: physics-feel.md)
 - [ ] Friction and rolling damping applied on contact/surface; sub-stepping/TOI loop for multiple contacts per step (spec: physics-feel.md)
 - [ ] Determinism test: two `World` runs with identical input sequences give identical positions (spec: physics-feel.md)
 - [ ] Flipper as rotating capsule: rest/up angles, swing-up speed, hold, angular velocity tracked per step (spec: physics-feel.md)
