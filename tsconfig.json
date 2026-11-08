@@ -22,7 +22,8 @@
             "@/*": ["src/*"],
             "@core/*": ["src/core/*"],
             "@physics/*": ["src/physics/*"],
-            "@render/*": ["src/render/*"]
+            "@render/*": ["src/render/*"],
+            "@rules/*": ["src/rules/*"]
         }
     },
     "include": ["src/**/*.ts"],

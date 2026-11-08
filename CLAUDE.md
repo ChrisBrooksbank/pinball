@@ -17,7 +17,7 @@ npm run check          # typecheck + lint + format:check + knip
 
 ## Architecture
 
-- Path aliases: `@/*`, `@core/*`, `@physics/*`, `@render/*`.
+- Path aliases: `@/*`, `@core/*`, `@physics/*`, `@render/*`, `@rules/*`.
 - Simulation is a fixed timestep (1000 Hz target), independent of rendering, and must not import
   three.js, so it can be unit tested headless and stays deterministic.
 - Custom 2D solver on a tilted plane: swept (continuous) ball collision, flippers as rotating

@@ -69,7 +69,7 @@ Every spec requirement is unimplemented.
 
 ### Phase 3: game-rules
 
-- [ ] `src/rules` skeleton: typed input events and output commands (lamp, score, display, sound, kickBall, addBall), headless engine with `handle(event)` returning commands; alias `@rules/*` (spec: game-rules.md)
+- [x] `src/rules` skeleton: typed input events and output commands (lamp, score, display, sound, kickBall, addBall), headless engine with `handle(event)` returning commands; alias `@rules/*` (spec: game-rules.md)
 - [ ] Game flow state machine: attract, start, plunger lane, play, drain, bonus count, next ball / game over (3 balls); test (spec: game-rules.md)
 - [ ] Scoring: bumper/target/spinner/ramp/orbit values, bonus multiplier, extra ball; tests (spec: game-rules.md)
 - [ ] Ball save (timed after launch) and tilt handling (ball lost, bonus forfeited); tests (spec: game-rules.md)
