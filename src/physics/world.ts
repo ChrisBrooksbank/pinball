@@ -104,6 +104,8 @@ interface WorldConfig {
     nudgeTiltLimit: number;
     /** Nudge counter decay per second. */
     nudgeDecay: number;
+    /** Restitution for ball-ball collisions (equal masses). */
+    ballRestitution: number;
 }
 
 const DEFAULT_WORLD_CONFIG: WorldConfig = {
@@ -111,6 +113,7 @@ const DEFAULT_WORLD_CONFIG: WorldConfig = {
     nudgeImpulse: 0.3,
     nudgeTiltLimit: 3,
     nudgeDecay: 1,
+    ballRestitution: 0.95,
 };
 
 type NudgeDirection = 'left' | 'right' | 'up';
@@ -251,8 +254,36 @@ export class World {
             this.checkSpinners(ball, dt);
             this.moveBall(ball, dt);
         }
+        this.collideBalls();
         for (const sp of this.spinners) {
             sp.angularVelocity *= Math.max(0, 1 - sp.damping * dt);
+        }
+    }
+
+    /** Simple circle-circle collision for multiball: separate overlaps and exchange normal velocity. */
+    private collideBalls(): void {
+        for (let i = 0; i < this.balls.length; i++) {
+            for (let j = i + 1; j < this.balls.length; j++) {
+                const a = this.balls[i]!;
+                const b = this.balls[j]!;
+                const dx = b.pos.x - a.pos.x;
+                const dy = b.pos.y - a.pos.y;
+                const minDist = a.radius + b.radius;
+                const distSq = dx * dx + dy * dy;
+                if (distSq >= minDist * minDist) continue;
+                const dist = Math.sqrt(distSq);
+                // Coincident balls: separate along an arbitrary but fixed axis (deterministic).
+                const normal = dist > 0 ? vec2(dx / dist, dy / dist) : vec2(1, 0);
+                const push = (minDist - dist) / 2 + CONTACT_SKIN;
+                a.pos = add(a.pos, scale(normal, -push));
+                b.pos = add(b.pos, scale(normal, push));
+                const vn = (b.vel.x - a.vel.x) * normal.x + (b.vel.y - a.vel.y) * normal.y;
+                if (vn >= 0) continue;
+                const restitution = -vn < RESTING_SPEED ? 0 : this.config.ballRestitution;
+                const j2 = (-(1 + restitution) * vn) / 2;
+                a.vel = add(a.vel, scale(normal, -j2));
+                b.vel = add(b.vel, scale(normal, j2));
+            }
         }
     }
 
