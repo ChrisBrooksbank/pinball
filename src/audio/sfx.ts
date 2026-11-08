@@ -98,6 +98,11 @@ export class Sfx {
         if (this.ctx.state === 'suspended') void this.ctx.resume();
     }
 
+    /** Context and master gain once unlocked (music routes through the same mute). */
+    get output(): { ctx: AudioContextLike; master: GainLike } | undefined {
+        return this.ctx && this.master ? { ctx: this.ctx, master: this.master } : undefined;
+    }
+
     setMuted(muted: boolean): void {
         this.muted = muted;
         if (this.master) this.master.gain.value = muted ? 0 : 1;

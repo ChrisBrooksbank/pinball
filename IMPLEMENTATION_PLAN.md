@@ -83,6 +83,30 @@ Every spec requirement is unimplemented.
 - [x] Scripted full-game test with no browser (spec: game-rules.md)
 - [x] Wire rules into main: physics events in, commands out to lamps/physics (spec: game-rules.md)
 
+### Phase 2b: table-rework (priority: do BEFORE remaining Phase 4 tasks)
+
+Feedback: physics feel is great, but the table is small and has no artwork. Replace the "Neon Orbit" placeholder with a
+full-size table modelled on a proven classic: **Gottlieb _Black Knight_ (1980)** - two-level playfield, upper flipper,
+3 pop bumpers, drop-target banks, spinner, outlane/inlane lanes, orbit loops, multiball. Keep the layout geometry and
+shot flow of the original (a tried and tested design); make all artwork, name and theme ORIGINAL (portfolio: no copied
+Gottlieb art/trademarks). Working title: "Neon Knight". Physics/rules code must stay unchanged unless a task says so.
+
+Sizing rule: real playfield is ~20.25" x 42" (~514 x 1067 mm) with a 27 mm ball, so the table must be ~19 ball
+diameters wide and ~40 tall. Today it is ~9.6 wide (0.52 vs ball radius 0.027): roughly half scale. Fix by growing the
+table (not shrinking the ball) so flipper length, lane widths and shot gaps match real proportions (flipper ~2.8 ball
+diameters, outlane/inlane gap ~1.5 balls, lane guides 2-3 balls wide).
+
+- [ ] Write `specs/table-neon-knight.md`: reference-layout analysis (zones, shot list, lane/target/bumper counts, upper-playfield flow, plunger lane, dimensions in ball diameters), mapped onto our element types; list any new element types needed (upper flipper, magnet-less magna-save substitute, drop-target bank, kickout saucer) (spec: table-layout.md)
+- [ ] Rescale: set real-proportion bounds and ball radius ratio, scale all existing elements, retune flipper dimensions, plunger travel and camera framing; physics tests still pass, add a table-proportion test (ball diameters across, flipper length) (spec: table-layout.md)
+- [ ] New element types in `src/table` + physics: drop-target bank (reset on clear), kickout saucer/hole with eject, second-level (upper) playfield flipper; validation + unit tests (spec: table-layout.md)
+- [ ] Author the full-size lower playfield: flippers, inlanes/outlanes, slingshots, return lanes, side-lane guides, target banks (spec: table-layout.md)
+- [ ] Author the upper playfield and orbits: 3 pop bumpers cluster, top lanes/rollovers, upper flipper, spinner, loop/ramp paths updated to new coordinates (spec: table-layout.md)
+- [ ] Re-map rules to the new layout: shot values, mission qualifiers, multiball lock (saucer), wizard unlock; rules tests and scripted full-game test updated (spec: game-rules.md)
+- [ ] Playfield artwork: procedural/canvas texture generated in code (no binary assets): themed illustration zones, inserts/arrows/lane graphics, rubber and plastic ramps; lamp inserts aligned to artwork (spec: table-layout.md)
+- [ ] 3D dressing: raised posts, plastic guides, ramp meshes with chrome rails, apron and lane-guide art, cabinet/side rails, backglass artwork for the new theme (spec: table-layout.md)
+- [ ] Camera and mobile framing for the taller table (portrait fills screen, landscape scrolls/zooms vertically with ball follow), perf recheck of draw calls and bloom (spec: table-layout.md)
+- [ ] Refresh Playwright visual snapshots and tuning-panel defaults for the new table; playtest notes in the plan (spec: table-layout.md)
+
 ### Phase 4: presentation
 
 - [x] Dot-matrix display renderer to canvas texture (score, ball, mode text), applied to backglass (spec: presentation.md)
@@ -93,7 +117,7 @@ Every spec requirement is unimplemented.
 - [x] Accelerometer nudge with iOS permission via user gesture (spec: presentation.md)
 - [x] Playwright interaction test: flipper key and touch zone both trigger flipper action (spec: presentation.md)
 - [x] Procedural WebAudio sfx (flipper, bumper, slingshot, target, spinner, drain), unlock-on-first-gesture, mute toggle (spec: presentation.md)
-- [ ] Chiptune-style music (spec: presentation.md)
+- [x] Chiptune-style music (spec: presentation.md)
 - [ ] High-score storage (localStorage top 10, injectable storage) with unit tests (spec: presentation.md)
 - [ ] Initials entry UI on game over (spec: presentation.md)
 - [ ] Attract mode: idle demo play and high-score screen (spec: presentation.md)
@@ -106,6 +130,7 @@ Every spec requirement is unimplemented.
 
 ## Notes
 
-- Phase order: physics-feel, table-layout, game-rules, presentation.
+- Phase order: physics-feel, table-layout, game-rules, table-rework (2b), presentation (remaining tasks).
+- The Phase 2 "Author the playfield" task produced a small placeholder; Phase 2b supersedes it.
 - Existing `main.ts` placeholder scene (plane + sphere) should be replaced, not extended, by task "Physics builds colliders".
 - Tuning panel (physics-feel) is the first debug UI; keep it dependency-free DOM, not a library, unless a build iteration decides otherwise.

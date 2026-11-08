@@ -1,4 +1,5 @@
 import { ACESFilmicToneMapping, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
+import { Music } from '@/audio/music';
 import { Sfx } from '@/audio/sfx';
 import { FixedStepper } from '@core/loop';
 import { createDebugPanel } from '@/debug-panel';
@@ -48,6 +49,7 @@ status.style.cssText =
 document.body.appendChild(status);
 
 const sfx = new Sfx(() => new AudioContext());
+const music = new Music(() => sfx.output);
 const unlockAudio = (): void => sfx.unlock();
 window.addEventListener('pointerdown', unlockAudio);
 window.addEventListener('keydown', unlockAudio);
@@ -97,6 +99,9 @@ renderer.setAnimationLoop(now => {
     });
     game.update(frame);
     for (const name of game.takeSounds()) sfx.play(name);
+    if (game.rules.phase === 'attract') music.stop();
+    else music.start();
+    music.update();
     status.textContent = `${game.displayText}  ${game.rules.score}`;
     dmd.update(
         {
