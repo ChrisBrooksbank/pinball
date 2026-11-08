@@ -1,4 +1,5 @@
 import { ACESFilmicToneMapping, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
+import { HighScores } from '@core/highscores';
 import { Music } from '@/audio/music';
 import { Sfx } from '@/audio/sfx';
 import { FixedStepper } from '@core/loop';
@@ -47,6 +48,9 @@ const status = document.createElement('div');
 status.style.cssText =
     'position:fixed;top:8px;left:8px;color:#0f0;font:16px monospace;pointer-events:none';
 document.body.appendChild(status);
+
+const highScores = new HighScores(typeof localStorage === 'undefined' ? null : localStorage);
+let wasGameOver = false;
 
 const sfx = new Sfx(() => new AudioContext());
 const music = new Music(() => sfx.output);
@@ -111,6 +115,9 @@ renderer.setAnimationLoop(now => {
     if (game.rules.phase === 'attract') music.stop();
     else music.start();
     music.update();
+    const isGameOver = game.rules.phase === 'gameOver';
+    if (isGameOver && !wasGameOver) highScores.add('AAA', game.rules.score); // initials UI comes next
+    wasGameOver = isGameOver;
     status.textContent = `${game.displayText}  ${game.rules.score}`;
     dmd.update(
         {
