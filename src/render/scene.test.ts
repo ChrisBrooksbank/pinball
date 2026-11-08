@@ -39,7 +39,7 @@ describe('buildTableScene', () => {
         const geometries = new Set(meshes.map(m => m.geometry));
         const materials = new Set(meshes.map(m => m.material));
         expect(geometries.size).toBeLessThan(meshes.length / 2);
-        expect(materials.size).toBeLessThan(meshes.length / 4);
+        expect(materials.size).toBeLessThan(meshes.length / 2);
     });
 });
 
@@ -117,7 +117,13 @@ describe('3D dressing', () => {
 
     it('adds the dressing and headboard meshes to the scene', () => {
         const scene = buildTableScene(new TableSim(PLAYFIELD));
-        const withDressing = scene.root.children.length;
-        expect(withDressing).toBeGreaterThan(PLAYFIELD.walls.length + 30);
+        const merged = scene.root.children.filter(
+            (c): c is Mesh =>
+                c instanceof Mesh && c.position.lengthSq() === 0 && c.geometry.index !== null
+        );
+        // Static walls, posts and rails are baked into one mesh per material.
+        expect(merged.length).toBeGreaterThanOrEqual(4);
+        const vertices = merged.reduce((n, m) => n + m.geometry.attributes.position!.count, 0);
+        expect(vertices).toBeGreaterThan(PLAYFIELD.walls.length * 24);
     });
 });

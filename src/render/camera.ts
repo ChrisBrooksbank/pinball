@@ -19,9 +19,36 @@ const MARGIN = 1.08;
 /** Backglass rises above the far edge; include it in the vertical extent. */
 const BACKGLASS_ALLOWANCE = 0.12;
 
-/** Fixed camera framing that fits the whole table (and backglass) for any viewport aspect. */
-export function computeCameraFraming(aspect: number, table: FramingTable): CameraFraming {
+/** Landscape view shows this fraction of the table length and scrolls vertically with the ball. */
+const LANDSCAPE_VISIBLE = 0.55;
+
+/**
+ * Camera framing for any viewport aspect. Portrait fits the whole table (and backglass).
+ * Landscape zooms in and centres on `focusZ` (world z of the ball) when given, clamped to the table.
+ */
+export function computeCameraFraming(
+    aspect: number,
+    table: FramingTable,
+    focusZ?: number
+): CameraFraming {
     const portrait = aspect < 1;
+    if (!portrait && focusZ !== undefined) {
+        const pitch = (PITCH_LANDSCAPE * Math.PI) / 180;
+        const tanHalf = Math.tan((FOV * Math.PI) / 360);
+        const span = table.height * LANDSCAPE_VISIBLE;
+        const dist =
+            Math.max((span * Math.sin(pitch)) / 2 / tanHalf, table.width / 2 / (tanHalf * aspect)) *
+                MARGIN *
+                1.1 +
+            span * 0.25 * Math.cos(pitch);
+        const half = (table.height - span) / 2;
+        const targetZ = Math.max(-half, Math.min(half, focusZ));
+        return {
+            fov: FOV,
+            target: [0, 0, targetZ],
+            position: [0, Math.sin(pitch) * dist, targetZ + Math.cos(pitch) * dist],
+        };
+    }
     const pitch = ((portrait ? PITCH_PORTRAIT : PITCH_LANDSCAPE) * Math.PI) / 180;
     const tanHalf = Math.tan((FOV * Math.PI) / 360);
 
@@ -43,9 +70,10 @@ export function computeCameraFraming(aspect: number, table: FramingTable): Camer
 export function applyCameraFraming(
     camera: PerspectiveCamera,
     aspect: number,
-    table: FramingTable
+    table: FramingTable,
+    focusZ?: number
 ): void {
-    const f = computeCameraFraming(aspect, table);
+    const f = computeCameraFraming(aspect, table, focusZ);
     camera.fov = f.fov;
     camera.aspect = aspect;
     camera.position.set(...f.position);

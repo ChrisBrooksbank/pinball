@@ -29,4 +29,24 @@ describe('camera framing', () => {
             Math.atan2(f.position[1], f.position[2] - f.target[2]);
         expect(pitch(portrait)).toBeGreaterThan(pitch(landscape));
     });
+
+    it('zooms in and follows the ball in landscape, clamped to the table', () => {
+        const full = computeCameraFraming(1.8, TABLE);
+        const follow = computeCameraFraming(1.8, TABLE, 0.2);
+        expect(follow.position[1]).toBeLessThan(full.position[1]);
+        expect(follow.target[2]).toBeCloseTo(0.2);
+        expect(computeCameraFraming(1.8, TABLE, 99).target[2]).toBeLessThan(0.5);
+        expect(computeCameraFraming(1.8, TABLE, -99).target[2]).toBeGreaterThan(-0.5);
+
+        const camera = new PerspectiveCamera();
+        applyCameraFraming(camera, 1.8, TABLE, 0.2);
+        camera.updateMatrixWorld();
+        const p = new Vector3(0, 0, 0.2).project(camera);
+        expect(Math.abs(p.x)).toBeLessThan(0.1);
+        expect(Math.abs(p.y)).toBeLessThan(0.1);
+    });
+
+    it('ignores the ball focus in portrait', () => {
+        expect(computeCameraFraming(0.5, TABLE, 0.3)).toEqual(computeCameraFraming(0.5, TABLE));
+    });
 });

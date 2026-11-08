@@ -18,6 +18,7 @@ import {
     SphereGeometry,
     type Texture,
 } from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { LampBank } from '@core/lamps';
 import type { TableSim } from '@physics/table-sim';
 import type { Vec2 } from '@physics/vec2';
@@ -154,6 +155,26 @@ export function buildTableScene(sim: TableSim): TableScene {
         root.add(pillar);
     }
 
+    /** Static parts are baked into one merged mesh per material to keep draw calls low. */
+    const batches = new Map<MeshStandardMaterial, BufferGeometry[]>();
+    const scratch = new Object3D();
+    const addStatic = (
+        material: MeshStandardMaterial,
+        geometry: BufferGeometry,
+        x: number,
+        y: number,
+        height: number,
+        rotationY = 0
+    ): void => {
+        place(scratch, x, y, height);
+        scratch.rotation.set(0, rotationY, 0);
+        scratch.updateMatrix();
+        const baked = geometry.clone().applyMatrix4(scratch.matrix);
+        const list = batches.get(material);
+        if (list) list.push(baked);
+        else batches.set(material, [baked]);
+    };
+
     const bar = (
         a: Vec2,
         b: Vec2,
@@ -163,16 +184,18 @@ export function buildTableScene(sim: TableSim): TableScene {
         elevation = 0
     ): void => {
         const len = Math.hypot(b.x - a.x, b.y - a.y);
-        const mesh = new Mesh(
-            cachedGeometry(
-                `box:${len.toFixed(5)}:${height}:${thickness}`,
-                () => new BoxGeometry(len, height, thickness)
-            ),
-            material
+        const geometry = cachedGeometry(
+            `box:${len.toFixed(5)}:${height}:${thickness}`,
+            () => new BoxGeometry(len, height, thickness)
         );
-        place(mesh, (a.x + b.x) / 2, (a.y + b.y) / 2, elevation + height / 2);
-        mesh.rotation.y = -Math.atan2(b.y - a.y, b.x - a.x);
-        root.add(mesh);
+        addStatic(
+            material,
+            geometry,
+            (a.x + b.x) / 2,
+            (a.y + b.y) / 2,
+            elevation + height / 2,
+            -Math.atan2(b.y - a.y, b.x - a.x)
+        );
     };
 
     for (const wall of table.walls) bar(wall.a, wall.b, chrome, 0.03, 0.006);
@@ -192,15 +215,11 @@ export function buildTableScene(sim: TableSim): TableScene {
     for (const s of table.spinners) bar(s.a, s.b, neon, 0.02, 0.004);
 
     for (const b of table.bumpers) {
-        const mesh = new Mesh(
-            cachedGeometry(
-                `cyl:${b.radius}`,
-                () => new CylinderGeometry(b.radius, b.radius, 0.04, 24)
-            ),
-            accent
+        const geometry = cachedGeometry(
+            `cyl:${b.radius}`,
+            () => new CylinderGeometry(b.radius, b.radius, 0.04, 24)
         );
-        place(mesh, b.center.x, b.center.y, 0.02);
-        root.add(mesh);
+        addStatic(accent, geometry, b.center.x, b.center.y, 0.02);
     }
 
     for (const part of buildDressing(table)) {
@@ -215,16 +234,18 @@ export function buildTableScene(sim: TableSim): TableScene {
                 part.elevation
             );
         } else {
-            const mesh = new Mesh(
-                cachedGeometry(
-                    `post:${part.radius}:${part.height}`,
-                    () => new CylinderGeometry(part.radius, part.radius, part.height, 12)
-                ),
-                material
+            const geometry = cachedGeometry(
+                `post:${part.radius}:${part.height}`,
+                () => new CylinderGeometry(part.radius, part.radius, part.height, 12)
             );
-            place(mesh, part.x, part.y, part.height / 2);
-            root.add(mesh);
+            addStatic(material, geometry, part.x, part.y, part.height / 2);
         }
+    }
+
+    for (const [material, list] of batches) {
+        const merged = mergeGeometries(list);
+        for (const g of list) g.dispose();
+        if (merged) root.add(new Mesh(merged, material));
     }
 
     const insertGeometry = new CircleGeometry(0.01, 16);

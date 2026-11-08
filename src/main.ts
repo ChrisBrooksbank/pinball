@@ -78,13 +78,21 @@ window.addEventListener('keyup', e => onKey(false, e));
 attachTouch(canvas, actions);
 attachAccelerometer(canvas, direction => sandbox.world.nudge(direction));
 
+let focusZ = 0;
+function frameCamera(smoothing: number): void {
+    const { clientWidth: w, clientHeight: h } = canvas as HTMLCanvasElement;
+    const ball = sandbox.world.balls[0];
+    if (ball) focusZ += (ball.pos.y - PLAYFIELD.bounds.height / 2 - focusZ) * smoothing;
+    applyCameraFraming(camera, w / h, PLAYFIELD.bounds, focusZ);
+}
+
 function resize(): void {
     const { clientWidth: w, clientHeight: h } = canvas as HTMLCanvasElement;
     const { pixelRatio, bloomScale } = quality;
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(w, h, false);
     post.setSize(w, h, pixelRatio, bloomScale);
-    applyCameraFraming(camera, w / h, PLAYFIELD.bounds);
+    frameCamera(1);
 }
 window.addEventListener('resize', resize);
 resize();
@@ -114,6 +122,7 @@ renderer.setAnimationLoop(now => {
     );
     tableScene.lamps.update(frame);
     tableScene.sync();
+    frameCamera(Math.min(1, frame * 4));
     debugPanel.update();
     post.render();
 });
