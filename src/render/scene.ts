@@ -1,6 +1,7 @@
 import {
     AmbientLight,
     BoxGeometry,
+    BufferGeometry,
     CircleGeometry,
     CylinderGeometry,
     Group,
@@ -35,6 +36,26 @@ export function buildTableScene(sim: TableSim): TableScene {
         obj.position.set(x - cx, height, y - cy);
     };
 
+    /** Share geometries and materials between parts with identical parameters. */
+    const geometries = new Map<string, BufferGeometry>();
+    const cachedGeometry = <G extends BufferGeometry>(key: string, create: () => G): G => {
+        let geometry = geometries.get(key);
+        if (!geometry) {
+            geometry = create();
+            geometries.set(key, geometry);
+        }
+        return geometry as G;
+    };
+    const lampMaterials = new Map<string, MeshStandardMaterial>();
+    const lampMaterial = (color: string): MeshStandardMaterial => {
+        let material = lampMaterials.get(color);
+        if (!material) {
+            material = new MeshStandardMaterial({ color, emissive: color });
+            lampMaterials.set(color, material);
+        }
+        return material;
+    };
+
     const chrome = new MeshStandardMaterial({ color: 0xd8e4ee, metalness: 1, roughness: 0.2 });
     const neon = new MeshStandardMaterial({ color: 0x35f0ff, emissive: 0x0a5560 });
     const accent = new MeshStandardMaterial({ color: 0xff3da5, emissive: 0x80154a });
@@ -55,7 +76,13 @@ export function buildTableScene(sim: TableSim): TableScene {
         thickness: number
     ): void => {
         const len = Math.hypot(b.x - a.x, b.y - a.y);
-        const mesh = new Mesh(new BoxGeometry(len, height, thickness), material);
+        const mesh = new Mesh(
+            cachedGeometry(
+                `box:${len.toFixed(5)}:${height}:${thickness}`,
+                () => new BoxGeometry(len, height, thickness)
+            ),
+            material
+        );
         place(mesh, (a.x + b.x) / 2, (a.y + b.y) / 2, height / 2);
         mesh.rotation.y = -Math.atan2(b.y - a.y, b.x - a.x);
         root.add(mesh);
@@ -78,24 +105,33 @@ export function buildTableScene(sim: TableSim): TableScene {
     for (const s of table.spinners) bar(s.a, s.b, neon, 0.02, 0.004);
 
     for (const b of table.bumpers) {
-        const mesh = new Mesh(new CylinderGeometry(b.radius, b.radius, 0.04, 24), accent);
+        const mesh = new Mesh(
+            cachedGeometry(
+                `cyl:${b.radius}`,
+                () => new CylinderGeometry(b.radius, b.radius, 0.04, 24)
+            ),
+            accent
+        );
         place(mesh, b.center.x, b.center.y, 0.02);
         root.add(mesh);
     }
 
     const insertGeometry = new CircleGeometry(0.01, 16);
     for (const lamp of table.lamps) {
-        const mesh = new Mesh(
-            insertGeometry,
-            new MeshStandardMaterial({ color: lamp.color, emissive: lamp.color })
-        );
+        const mesh = new Mesh(insertGeometry, lampMaterial(lamp.color));
         mesh.rotation.x = -Math.PI / 2;
         place(mesh, lamp.pos.x, lamp.pos.y, 0.001);
         root.add(mesh);
     }
 
     const flipperMeshes = world.flippers.map(flipper => {
-        const mesh = new Mesh(new BoxGeometry(flipper.config.length, 0.03, 0.024), gold);
+        const mesh = new Mesh(
+            cachedGeometry(
+                `flipper:${flipper.config.length}`,
+                () => new BoxGeometry(flipper.config.length, 0.03, 0.024)
+            ),
+            gold
+        );
         root.add(mesh);
         return mesh;
     });

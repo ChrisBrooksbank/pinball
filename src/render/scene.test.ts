@@ -1,3 +1,4 @@
+import { Mesh } from 'three';
 import { describe, expect, it } from 'vitest';
 import { TableSim } from '@physics/table-sim';
 import { PLAYFIELD } from '@/table/playfield';
@@ -29,5 +30,14 @@ describe('buildTableScene', () => {
         scene.sync();
         const rotated = scene.root.children.filter(c => c.rotation.y === -sim.left.angle);
         expect(rotated.length).toBeGreaterThan(0);
+    });
+
+    it('reuses geometry and materials across repeated parts', () => {
+        const scene = buildTableScene(new TableSim(PLAYFIELD));
+        const meshes = scene.root.children.filter((c): c is Mesh => c instanceof Mesh);
+        const geometries = new Set(meshes.map(m => m.geometry));
+        const materials = new Set(meshes.map(m => m.material));
+        expect(geometries.size).toBeLessThan(meshes.length / 2);
+        expect(materials.size).toBeLessThan(meshes.length / 4);
     });
 });
