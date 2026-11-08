@@ -45,6 +45,8 @@ export class RulesEngine {
     private rollovers = new Set<string>();
     private extraBalls = 0;
     private saveTimer = 0;
+    /** A ball save is granted once per ball; relaunching a saved ball must not re-arm it. */
+    private saveSpent = false;
     private comboTimer = 0;
     private comboCount = 0;
     private tilted = false;
@@ -156,7 +158,7 @@ export class RulesEngine {
             case 'ballLaunched':
                 if (this.currentPhase === 'plunger') {
                     this.currentPhase = 'play';
-                    this.saveTimer = BALL_SAVE_SECONDS;
+                    this.saveTimer = this.saveSpent ? 0 : BALL_SAVE_SECONDS;
                     commands.push({ type: 'display', text: `BALL ${this.ball}` });
                 }
                 break;
@@ -169,6 +171,7 @@ export class RulesEngine {
                 }
                 if (this.saveTimer > 0 && !this.tilted) {
                     this.saveTimer = 0;
+                    this.saveSpent = true;
                     this.currentPhase = 'plunger';
                     commands.push({ type: 'addBall' });
                     commands.push({ type: 'display', text: 'BALL SAVED' });
@@ -414,6 +417,7 @@ export class RulesEngine {
         this.rollovers.clear();
         this.tilted = false;
         this.saveTimer = 0;
+        this.saveSpent = false;
         this.comboTimer = 0;
         this.comboCount = 0;
         this.ballsInPlay = 1;

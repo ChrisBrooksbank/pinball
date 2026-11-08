@@ -247,7 +247,7 @@ const LAMPS: LampDef[] = [
 
 /** The one original table: two lower flippers, an upper flipper, slingshots, 3 pop bumpers, drop banks, rollovers, a spinner. */
 export const PLAYFIELD: TableDef = {
-    name: 'Neon Orbit',
+    name: 'Neon Knight',
     bounds: { width: 1.04, height: 2.16 },
     ballRadius: BALL_RADIUS,
     walls: buildWalls(),

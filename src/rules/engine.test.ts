@@ -178,6 +178,15 @@ describe('ball save and tilt', () => {
         expect(engine.ballSaveActive).toBe(false);
     });
 
+    it('grants only one ball save per ball, even when the saved ball is relaunched', () => {
+        const engine = playing();
+        engine.handle({ type: 'drain', ballId: 0 });
+        engine.handle({ type: 'ballLaunched', ballId: 0 });
+        expect(engine.ballSaveActive).toBe(false);
+        engine.handle({ type: 'drain', ballId: 0 });
+        expect(engine.phase).toBe('bonus');
+    });
+
     it('ball save expires after the timer', () => {
         const engine = playing();
         engine.handle({ type: 'tick', dt: 11 });
