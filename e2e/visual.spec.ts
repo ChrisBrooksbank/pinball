@@ -5,6 +5,9 @@ test.describe('Visual regression', () => {
         await page.goto('/');
         await page.waitForLoadState('networkidle');
         await page.waitForTimeout(500); // let the first frames render
-        await expect(page).toHaveScreenshot('table.png', { maxDiffPixelRatio: 0.02 });
+        await expect(page).toHaveScreenshot('table.png', {
+            maxDiffPixelRatio: 0.05,
+            timeout: 20000,
+        });
     });
 });

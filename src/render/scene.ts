@@ -89,15 +89,18 @@ export function buildTableScene(sim: TableSim): TableScene {
     };
     const chrome = new MeshStandardMaterial({
         color: PALETTE.chrome,
-        metalness: 1,
-        roughness: 0.2,
+        metalness: 0.85,
+        roughness: 0.25,
+        envMapIntensity: 3,
     });
     // Mirror-like ball picks up the scene environment map (set by the renderer host).
     const ballMaterial = new MeshStandardMaterial({
         color: 0xffffff,
         metalness: 1,
         roughness: 0.05,
-        envMapIntensity: 1.5,
+        envMapIntensity: 4,
+        emissive: 0x303a50,
+        emissiveIntensity: 0.6,
     });
     const neon = new MeshStandardMaterial({
         color: PALETTE.cyan,
@@ -115,7 +118,19 @@ export function buildTableScene(sim: TableSim): TableScene {
         emissiveIntensity: 1.4,
     });
     const cabinet = new MeshStandardMaterial({ color: 0x1a0f33, roughness: 0.7 });
-    const dressingMaterials = { chrome, accent, neon, gold, cabinet };
+    // Translucent smoked plastic so the ramp deck never hides the artwork or the ball beneath it.
+    const deck = new MeshStandardMaterial({
+        color: 0x2a1450,
+        roughness: 0.3,
+        transparent: true,
+        opacity: 0.45,
+    });
+    const dropTarget = new MeshStandardMaterial({
+        color: 0x39ff14,
+        emissive: 0x1a8a08,
+        emissiveIntensity: 1.2,
+    });
+    const dressingMaterials = { chrome, accent, neon, gold, cabinet, deck };
 
     // Artwork carries its own colours; fall back to the flat dark colour where no canvas exists.
     const artwork = createPlayfieldTexture(table);
@@ -123,7 +138,8 @@ export function buildTableScene(sim: TableSim): TableScene {
         new PlaneGeometry(table.bounds.width, table.bounds.height),
         new MeshStandardMaterial({
             color: artwork ? 0xffffff : PALETTE.playfield,
-            roughness: 0.5,
+            roughness: 0.9,
+            envMapIntensity: 0.15,
             map: artwork ?? null,
         })
     );
@@ -213,6 +229,23 @@ export function buildTableScene(sim: TableSim): TableScene {
     for (const s of table.slingshots) bar(s.a, s.b, accent, 0.03, 0.01);
     for (const t of table.targets) bar(t.a, t.b, gold, 0.03, 0.012);
     for (const s of table.spinners) bar(s.a, s.b, neon, 0.02, 0.004);
+    for (const bank of table.dropBanks ?? [])
+        for (const t of bank.targets) bar(t.a, t.b, dropTarget, 0.035, 0.014);
+    // Orbit routes: a faint smoked-glass track shows where a scripted orbit runs, without clutter.
+    for (const path of table.paths) {
+        if (path.kind !== 'orbit' || path.id === 'launch') continue;
+        for (let i = 0; i + 1 < path.points.length; i++) {
+            bar(path.points[i]!, path.points[i + 1]!, deck, 0.003, 0.05, 0.02);
+        }
+    }
+    for (const saucer of table.saucers ?? []) {
+        const ring = cachedGeometry(
+            `saucer:${saucer.radius}`,
+            () =>
+                new CylinderGeometry(saucer.radius * 1.25, saucer.radius * 1.25, 0.012, 24, 1, true)
+        );
+        addStatic(gold, ring, saucer.center.x, saucer.center.y, 0.006);
+    }
 
     for (const b of table.bumpers) {
         const geometry = cachedGeometry(
@@ -220,6 +253,11 @@ export function buildTableScene(sim: TableSim): TableScene {
             () => new CylinderGeometry(b.radius, b.radius, 0.04, 24)
         );
         addStatic(accent, geometry, b.center.x, b.center.y, 0.02);
+        const cap = cachedGeometry(
+            `cap:${b.radius}`,
+            () => new CylinderGeometry(b.radius * 0.7, b.radius * 0.8, 0.012, 24)
+        );
+        addStatic(chrome, cap, b.center.x, b.center.y, 0.046);
     }
 
     for (const part of buildDressing(table)) {
@@ -294,8 +332,8 @@ export function buildTableScene(sim: TableSim): TableScene {
     const ballGeometry = new SphereGeometry(table.ballRadius, 32, 16);
     const ballMeshes: Mesh[] = [];
 
-    root.add(new AmbientLight(0xffffff, 0.35));
-    const light = new PointLight(0xff3da5, 3, 4);
+    root.add(new AmbientLight(0xffffff, 0.5));
+    const light = new PointLight(0xffb0e0, 1.2, 4);
     light.position.set(0, 1, 0.2);
     root.add(light);
 

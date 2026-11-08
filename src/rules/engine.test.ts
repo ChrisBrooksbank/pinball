@@ -410,3 +410,40 @@ describe('wizard mode', () => {
         expect(commands).toContainEqual({ type: 'display', text: 'WIZARD OVER' });
     });
 });
+
+describe('top rollovers A-B-C', () => {
+    const roll = (engine: RulesEngine, name: string) =>
+        engine.handle({ type: 'laneEnter', id: `rollover-${name}`, ballId: 0 });
+
+    it('lights each rollover once and scores repeats less', () => {
+        const engine = playing();
+        const first = roll(engine, 'a');
+        expect(first).toContainEqual({ type: 'lamp', id: 'lamp-rollover-a', mode: 'on' });
+        expect(engine.score).toBe(100);
+        roll(engine, 'a');
+        expect(engine.score).toBe(125);
+    });
+
+    it('completing A-B-C pays a bonus, raises the multiplier and resets the lamps', () => {
+        const engine = playing();
+        roll(engine, 'a');
+        roll(engine, 'b');
+        const done = roll(engine, 'c');
+        expect(done).toContainEqual({ type: 'display', text: 'ABC BONUS X2' });
+        expect(done).toContainEqual({ type: 'lamp', id: 'lamp-rollover-a', mode: 'off' });
+        expect(engine.bonusMultiplier).toBe(2);
+        expect(engine.score).toBe(300 + 3000);
+        // The bank is re-armed: A lights again.
+        expect(roll(engine, 'a')).toContainEqual({
+            type: 'lamp',
+            id: 'lamp-rollover-a',
+            mode: 'on',
+        });
+    });
+
+    it('ignores rollovers outside play', () => {
+        const engine = new RulesEngine();
+        roll(engine, 'a');
+        expect(engine.score).toBe(0);
+    });
+});

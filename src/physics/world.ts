@@ -26,7 +26,7 @@ interface Ball {
     vel: Vec2;
     radius: number;
     /** Set while the ball is carried along a scripted path (orbit/ramp). */
-    path?: { scripted: ScriptedPath; distance: number };
+    path?: { scripted: ScriptedPath; distance: number; entrySpeed: number };
     /** Set while the ball sits in a saucer awaiting ejection. */
     captured?: Saucer;
     /** Saucer the ball was just ejected from; it cannot recapture until the ball clears it. */
@@ -419,7 +419,7 @@ export class World {
             if (speed < minSpeed) continue;
             if (ball.vel.x * entryDirection.x + ball.vel.y * entryDirection.y <= 0) continue;
             if (!movementCrossesSegment(ball.pos, d, entry.a, entry.b)) continue;
-            ball.path = { scripted, distance: 0 };
+            ball.path = { scripted, distance: 0, entrySpeed: speed };
             ball.pos = scripted.line.positionAt(0);
             ball.vel = vec2();
             this.events.push({ type: 'pathEnter', id, ballId: this.balls.indexOf(ball) });
@@ -436,7 +436,9 @@ export class World {
         state.distance += def.speed * dt;
         ball.pos = line.positionAt(state.distance);
         if (state.distance < line.length) return;
-        ball.vel = scale(line.exitDirection, def.exitSpeed);
+        const gain = def.exitSpeedGain ?? 0;
+        const exitSpeed = Math.max(0.3, def.exitSpeed + gain * (state.entrySpeed - def.minSpeed));
+        ball.vel = scale(line.exitDirection, exitSpeed);
         ball.path = undefined;
         this.events.push({ type: 'pathExit', id: def.id, ballId: this.balls.indexOf(ball) });
     }

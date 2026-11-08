@@ -1,3 +1,4 @@
+import './hud.css';
 import { ACESFilmicToneMapping, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
 import { HighScores } from '@core/highscores';
 import { AttractMode } from '@core/attract';
@@ -6,6 +7,7 @@ import { Music } from '@/audio/music';
 import { Sfx } from '@/audio/sfx';
 import { FixedStepper } from '@core/loop';
 import { PauseClock } from '@core/pause';
+import { createHud } from '@/hud';
 import { createDebugPanel } from '@/debug-panel';
 import { TableSim } from '@physics/table-sim';
 import { applyCameraFraming } from '@render/camera';
@@ -47,10 +49,7 @@ tableScene.backglass.material.map = dmd.texture;
 tableScene.backglass.material.needsUpdate = true;
 const post = createPostProcessing(renderer, scene, camera);
 const game = new GameDriver(sandbox, tableScene.lamps);
-const status = document.createElement('div');
-status.style.cssText =
-    'position:fixed;top:8px;left:8px;color:#0f0;font:16px monospace;pointer-events:none';
-document.body.appendChild(status);
+const hud = createHud(() => sfx.toggleMute());
 
 const highScores = new HighScores(typeof localStorage === 'undefined' ? null : localStorage);
 const attract = new AttractMode();
@@ -59,21 +58,8 @@ let wasAttract = true;
 let wasGameOver = false;
 let entry: InitialsEntry | null = null;
 let entryScore = 0;
-const entryOverlay = document.createElement('div');
-entryOverlay.style.cssText =
-    'position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;' +
-    'background:rgba(0,0,0,0.75);color:#ff0;font:bold 28px monospace;white-space:pre;text-align:center;pointer-events:none';
-document.body.appendChild(entryOverlay);
 function renderEntry(): void {
-    entryOverlay.style.display = entry ? 'flex' : 'none';
-    if (entry) {
-        entryOverlay.textContent = `NEW HIGH SCORE
-${entryScore}
-
-${entry.display}
-
-FLIPPERS: CHANGE   START: OK`;
-    }
+    hud.showEntry(entry ? { score: entryScore, initials: entry.display } : null);
 }
 /** Route an action to the initials entry while it is open; returns true when consumed. */
 function entryAction(action: string, down: boolean): boolean {
@@ -185,7 +171,13 @@ renderer.setAnimationLoop(now => {
         for (const f of [...sandbox.flippersFor('left'), ...sandbox.flippersFor('right')])
             f.setHeld(false);
     }
-    status.textContent = `${shownText}  ${game.rules.score}`;
+    hud.update({
+        phase: game.rules.phase,
+        score: game.rules.score,
+        ball: game.rules.ballNumber,
+        message: shownText,
+        muted: sfx.isMuted,
+    });
     dmd.update(
         {
             score: game.rules.score,

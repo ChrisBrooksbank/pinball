@@ -1,6 +1,8 @@
 import type { TableDef } from '../table/types';
 import type { Flipper } from './flipper';
 import type { Plunger } from './plunger';
+import { movementCrossesSegment } from './path';
+import { vec2 } from './vec2';
 import { World } from './world';
 
 /** Build a physics world containing the colliders and elements described by a table definition. */
@@ -63,9 +65,30 @@ export class TableSim {
         );
     }
 
+    /** Ball positions before the last step, reused to avoid per-step allocation. */
+    private previous: { x: number; y: number }[] = [];
+
     step(dt: number): void {
-        this.world.step(dt);
         const { balls, events } = this.world;
+        for (let i = 0; i < balls.length; i++) {
+            const ball = balls[i]!;
+            const prev = (this.previous[i] ??= { x: 0, y: 0 });
+            prev.x = ball.pos.x;
+            prev.y = ball.pos.y;
+        }
+        const before = balls.length;
+        this.world.step(dt);
+        // Lane triggers: a ball whose centre crosses a lane line this step enters that lane.
+        for (let i = 0; i < Math.min(before, balls.length); i++) {
+            const ball = balls[i]!;
+            const prev = this.previous[i]!;
+            const delta = vec2(ball.pos.x - prev.x, ball.pos.y - prev.y);
+            for (const lane of this.table.lanes) {
+                if (movementCrossesSegment(prev, delta, lane.a, lane.b)) {
+                    events.push({ type: 'laneEnter', id: lane.id, ballId: i });
+                }
+            }
+        }
         for (let i = balls.length - 1; i >= 0; i--) {
             const ball = balls[i];
             if (ball && ball.pos.y > this.table.drain.y) {

@@ -1,4 +1,5 @@
 {
     "entry": ["e2e/**/*.spec.ts"],
-    "project": ["src/**/*.ts", "e2e/**/*.ts"]
+    "project": ["src/**/*.ts", "e2e/**/*.ts"],
+    "ignoreDependencies": ["@fontsource/orbitron"]
 }

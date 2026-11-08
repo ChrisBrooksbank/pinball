@@ -24,6 +24,9 @@ const SHOT_EVENTS: ReadonlySet<string> = new Set([
     'saucerCapture',
 ]);
 
+/** Number of top rollover lanes (A-B-C). */
+const ROLLOVER_COUNT = 3;
+
 /** Lamp that shows the saucer lock is lit. */
 const LOCK_LAMP = 'lamp-saucer';
 
@@ -39,6 +42,7 @@ export class RulesEngine {
     private multiplier = 1;
     private targetHits = 0;
     private rampShots = 0;
+    private rollovers = new Set<string>();
     private extraBalls = 0;
     private saveTimer = 0;
     private comboTimer = 0;
@@ -212,7 +216,9 @@ export class RulesEngine {
                 this.scorePlay(SCORING.slingshot, 0, 'slingshot', commands);
                 break;
             case 'laneEnter':
-                if (event.id.startsWith('inlane')) {
+                if (event.id.startsWith('rollover')) {
+                    this.rollover(event.id, commands);
+                } else if (event.id.startsWith('inlane')) {
                     this.scorePlay(SCORING.inlane, 0, 'lane', commands);
                 } else if (event.id.startsWith('outlane')) {
                     this.scorePlay(SCORING.outlane, 0, 'lane', commands);
@@ -260,6 +266,25 @@ export class RulesEngine {
         this.award(points, out);
         this.bonus += bonus;
         out.push({ type: 'sound', name: sound });
+    }
+
+    /** Top rollover lanes: each lights once; completing A-B-C pays a bonus and advances the multiplier. */
+    private rollover(id: string, out: RulesCommand[]): void {
+        if (this.currentPhase !== 'play' || this.tilted) return;
+        if (this.rollovers.has(id)) {
+            this.scorePlay(SCORING.rolloverRepeat, 0, 'lane', out);
+            return;
+        }
+        this.rollovers.add(id);
+        out.push({ type: 'lamp', id: `lamp-${id}`, mode: 'on' });
+        this.scorePlay(SCORING.rollover, SCORING.bonusRollover, 'lane', out);
+        if (this.rollovers.size < ROLLOVER_COUNT) return;
+        this.scorePlay(SCORING.rolloverComplete, 0, 'dropBank', out);
+        this.multiplier = Math.min(SCORING.maxMultiplier, this.multiplier + 1);
+        out.push({ type: 'display', text: `ABC BONUS X${this.multiplier}` });
+        for (const lit of this.rollovers)
+            out.push({ type: 'lamp', id: `lamp-${lit}`, mode: 'off' });
+        this.rollovers.clear();
     }
 
     /** Clearing a bank pays and advances the bonus multiplier. */
@@ -384,6 +409,9 @@ export class RulesEngine {
         this.bonus = 0;
         this.multiplier = 1;
         this.targetHits = 0;
+        for (const lit of this.rollovers)
+            out.push({ type: 'lamp', id: `lamp-${lit}`, mode: 'off' });
+        this.rollovers.clear();
         this.tilted = false;
         this.saveTimer = 0;
         this.comboTimer = 0;

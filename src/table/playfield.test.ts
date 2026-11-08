@@ -83,7 +83,9 @@ describe('PLAYFIELD upper playfield', () => {
     it('has an upper flipper, three rollovers and both orbits', () => {
         expect(PLAYFIELD.flippers.filter(f => f.level === 'upper')).toHaveLength(1);
         expect(PLAYFIELD.lanes.filter(l => l.kind === 'rollover')).toHaveLength(3);
-        const orbits = PLAYFIELD.paths.filter(p => p.kind === 'orbit').map(p => p.id);
+        const orbits = PLAYFIELD.paths
+            .filter(p => p.kind === 'orbit' && p.id !== 'launch')
+            .map(p => p.id);
         expect(orbits.sort()).toEqual(['orbit-left', 'orbit-right']);
     });
 

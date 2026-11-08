@@ -12,6 +12,10 @@ function fakeContext(): PaintContext & { calls: string[] } {
         fillStyle: '',
         strokeStyle: '',
         lineWidth: 0,
+        lineJoin: 'miter',
+        lineCap: 'butt',
+        shadowColor: '',
+        shadowBlur: 0,
         font: '',
         textAlign: 'left',
         textBaseline: 'alphabetic',
@@ -24,6 +28,9 @@ function fakeContext(): PaintContext & { calls: string[] } {
         fill: rec('fill'),
         stroke: rec('stroke'),
         fillText: rec('fillText'),
+        strokeText: rec('strokeText'),
+        createLinearGradient: () => ({ addColorStop: rec('stop') }) as unknown as CanvasGradient,
+        createRadialGradient: () => ({ addColorStop: rec('stop') }) as unknown as CanvasGradient,
     };
 }
 

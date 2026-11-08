@@ -101,6 +101,8 @@ export interface ScriptedPathDef {
     speed: number;
     /** Speed (m/s) at which the ball leaves the last point. */
     exitSpeed: number;
+    /** Extra exit speed per m/s of entry speed above `minSpeed` (default 0: fixed exit speed). */
+    exitSpeedGain?: number;
 }
 
 export interface PlungerLaneDef {

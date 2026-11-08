@@ -11,4 +11,4 @@ export const PALETTE = {
 } as const;
 
 /** Bloom post-processing parameters (strength, radius, luminance threshold). */
-export const BLOOM = { strength: 0.8, radius: 0.5, threshold: 0.35 } as const;
+export const BLOOM = { strength: 0.55, radius: 0.4, threshold: 0.7 } as const;

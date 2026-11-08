@@ -4,6 +4,11 @@ export const SCORING = {
     target: 500,
     spinner: 25,
     slingshot: 10,
+    rollover: 100,
+    rolloverRepeat: 25,
+    /** Awarded when all three top rollovers (A-B-C) are lit; also raises the bonus multiplier. */
+    rolloverComplete: 3000,
+    bonusRollover: 25,
     inlane: 250,
     outlane: 1000,
     orbit: 1500,

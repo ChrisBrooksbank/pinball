@@ -45,7 +45,7 @@ const RIGHT_FLIPPER: FlipperConfig = {
 /** Upper-playfield flipper (left button); feeds the bumper cluster and the right-hand shots. */
 const UPPER_LEFT_FLIPPER: FlipperConfig = {
     ...flipperBase,
-    pivot: vec2(0.09, 0.6),
+    pivot: vec2(0.18, 0.84),
     restAngle: 0.5,
     upAngle: -0.5,
 };
@@ -60,6 +60,10 @@ const SIDE_WALLS: readonly (readonly [string, number, number, number, number])[]
     ['guide-top', 0.14, 1.3, 0.14, 1.4],
     ['guide', 0.14, 1.4, 0.14, 1.58],
     ['guide-slope', 0.14, 1.58, 0.2, 1.77],
+    // Orbit side channels: a sloped cap sheds balls from the arch back into play; the inner wall keeps
+    // the channel mouth (y 0.96-1.3) as the only way in, fed by flipper shots up the side.
+    ['channel-cap', 0.02, 0.56, 0.14, 0.66],
+    ['channel-inner', 0.14, 0.66, 0.14, 0.96],
     // Slingshot housing (the kicking face is a separate slingshot element).
     ['sling-back', 0.26, 1.38, 0.26, 1.58],
     ['sling-base', 0.26, 1.58, 0.35, 1.58],
@@ -71,6 +75,10 @@ function buildWalls(): WallDef[] {
         { id: 'wall-left', a: vec2(0.02, 0.51), b: vec2(0.02, 2) },
         { id: 'wall-lane-divider', a: vec2(0.86, 0.64), b: vec2(0.86, 2) },
         { id: 'wall-right', a: vec2(1.0, 0.51), b: vec2(1.0, 2) },
+        // Plunger lane is sealed at the top (like a real one-way gate): a plunged ball is carried
+        // over the arch by the `launch` path, and balls coming down the arch roll off the sloped roof.
+        { id: 'wall-lane-divider-top', a: vec2(0.86, 0.64), b: vec2(0.86, 0.34) },
+        { id: 'wall-lane-roof', a: vec2(0.86, 0.34), b: vec2(0.97, 0.28) },
     ];
     for (const [id, x1, y1, x2, y2] of SIDE_WALLS) {
         walls.push({ id: `${id}-l`, a: vec2(x1, y1), b: vec2(x2, y2) });
@@ -87,23 +95,24 @@ const SLINGSHOTS: SlingshotDef[] = [
     { id: 'sling-right', a: vec2(mx(0.26), 1.38), b: vec2(mx(0.35), 1.58) },
 ];
 
+/** Standup bank on the right inner face of the bumper chamber, mirroring the upper flipper. */
 const TARGETS: TargetDef[] = [0, 1, 2].map(i => ({
     id: `target-${i + 1}`,
-    a: vec2(0.072, 0.92 + i * 0.12),
-    b: vec2(0.072, 1.0 + i * 0.12),
+    a: vec2(0.71, 0.7 + i * 0.1),
+    b: vec2(0.71, 0.77 + i * 0.1),
     lampId: `lamp-target-${i + 1}`,
 }));
 
 /** Mid-playfield drop-target banks (3 each), mirrored about the centre line. */
 const DROP_BANKS: DropTargetBankDef[] = (['left', 'right'] as const).map(side => {
-    const x = side === 'left' ? 0.2 : mx(0.2);
+    const x = side === 'left' ? 0.22 : mx(0.22);
     return {
         id: `dropbank-${side}`,
         resetDelay: 1,
         targets: [0, 1, 2].map(i => ({
             id: `droptarget-${side}-${i + 1}`,
-            a: vec2(x, 1.0 + i * 0.1),
-            b: vec2(x, 1.08 + i * 0.1),
+            a: vec2(x, 0.98 + i * 0.1),
+            b: vec2(x, 1.06 + i * 0.1),
             lampId: `lamp-droptarget-${side}-${i + 1}`,
         })),
     };
@@ -123,37 +132,71 @@ const RAW_LANES: Omit<LaneDef, 'lampId'>[] = [
 ];
 const LANES: LaneDef[] = RAW_LANES.map(lane => ({ ...lane, lampId: `lamp-${lane.id}` }));
 
+/** Points along the top of an orbit: an elliptical sweep from `from` to `to` degrees about the arch. */
+function archPoints(fromDeg: number, toDeg: number): ReturnType<typeof vec2>[] {
+    const out: ReturnType<typeof vec2>[] = [];
+    const steps = 8;
+    for (let i = 0; i <= steps; i++) {
+        const a = ((fromDeg + ((toDeg - fromDeg) * i) / steps) * Math.PI) / 180;
+        out.push(vec2(0.44 + Math.cos(a) * 0.37, 0.5 - Math.sin(a) * 0.37));
+    }
+    return out;
+}
+
 const PATHS: ScriptedPathDef[] = [
     {
-        // Right orbit: up the right side, over the top, and back down the left side.
+        // Plunger launch: up the lane, around the arch, released over the top rollovers.
+        id: 'launch',
+        kind: 'orbit',
+        entry: { a: vec2(0.87, 1.2), b: vec2(0.99, 1.2) },
+        entryDirection: vec2(0, -1),
+        minSpeed: 1.2,
+        points: [
+            vec2(0.93, 1.2),
+            vec2(0.93, 0.5),
+            vec2(0.89, 0.28),
+            vec2(0.78, 0.13),
+            vec2(0.62, 0.08),
+        ],
+        speed: 4,
+        exitSpeed: 1.2,
+        // A harder pull on the plunger comes out of the arch faster.
+        exitSpeedGain: 0.4,
+    },
+    {
+        // Right orbit: up the right channel, over the arch, down the left channel into the left inlane.
         id: 'orbit-right',
         kind: 'orbit',
         entry: { a: vec2(0.76, 0.9), b: vec2(0.85, 0.9) },
         entryDirection: vec2(0, -1),
         minSpeed: 1.5,
         points: [
-            vec2(0.81, 0.9),
-            vec2(0.8, 0.6),
-            vec2(0.44, 0.1),
-            vec2(0.08, 0.6),
-            vec2(0.07, 0.86),
+            vec2(0.8, 0.9),
+            vec2(0.81, 0.56),
+            ...archPoints(0, 180),
+            vec2(0.07, 0.56),
+            vec2(0.08, 0.95),
+            vec2(0.1, 1.05),
+            vec2(0.17, 1.25),
         ],
         speed: 3,
         exitSpeed: 1.5,
     },
     {
-        // Left orbit: up the left side, over the top, and back down the right side.
+        // Left orbit: up the left channel, over the arch, down the right channel into the right inlane.
         id: 'orbit-left',
         kind: 'orbit',
-        entry: { a: vec2(0.03, 0.84), b: vec2(0.12, 0.84) },
+        entry: { a: vec2(0.03, 0.9), b: vec2(0.12, 0.9) },
         entryDirection: vec2(0, -1),
         minSpeed: 1.5,
         points: [
-            vec2(0.07, 0.84),
-            vec2(0.08, 0.6),
-            vec2(0.44, 0.1),
-            vec2(0.8, 0.6),
-            vec2(0.82, 1.0),
+            vec2(0.07, 0.9),
+            vec2(0.07, 0.56),
+            ...archPoints(180, 0),
+            vec2(0.81, 0.56),
+            vec2(0.8, 0.95),
+            vec2(0.78, 1.05),
+            vec2(0.71, 1.25),
         ],
         speed: 3,
         exitSpeed: 1.5,
@@ -172,9 +215,9 @@ const PATHS: ScriptedPathDef[] = [
 ];
 
 /** Centre-left kickout saucer: lock and mission hole. */
-const SAUCER_CENTER = vec2(0.3, 0.92);
+const SAUCER_CENTER = vec2(0.34, 1.06);
 
-const BUMPER_POSITIONS = [vec2(0.4, 0.62), vec2(0.62, 0.62), vec2(0.51, 0.8)];
+const BUMPER_POSITIONS = [vec2(0.35, 0.54), vec2(0.53, 0.54), vec2(0.44, 0.7)];
 
 const LAMPS: LampDef[] = [
     ...BUMPER_POSITIONS.map((p, i) => ({
@@ -184,7 +227,7 @@ const LAMPS: LampDef[] = [
     })),
     ...TARGETS.map((t, i) => ({
         id: `lamp-target-${i + 1}`,
-        pos: vec2(0.14, (t.a.y + t.b.y) / 2),
+        pos: vec2(0.64, (t.a.y + t.b.y) / 2),
         color: '#00f0ff',
     })),
     ...DROP_BANKS.flatMap(bank =>
@@ -233,7 +276,7 @@ export const PLAYFIELD: TableDef = {
     targets: TARGETS,
     dropBanks: DROP_BANKS,
     saucers: [{ id: 'saucer-lock', center: SAUCER_CENTER, radius: 0.04, lampId: 'lamp-saucer' }],
-    spinners: [{ id: 'spinner-1', a: vec2(0.78, 0.6), b: vec2(0.78, 0.72) }],
+    spinners: [{ id: 'spinner-1', a: vec2(0.58, 0.95), b: vec2(0.58, 1.03) }],
     paths: PATHS,
     lanes: LANES,
     plungerLane: {

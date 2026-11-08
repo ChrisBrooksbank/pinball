@@ -1,6 +1,6 @@
 import type { TableDef } from '@/table/types';
 
-type DressingMaterial = 'chrome' | 'accent' | 'neon' | 'gold' | 'cabinet';
+type DressingMaterial = 'chrome' | 'accent' | 'neon' | 'gold' | 'cabinet' | 'deck';
 
 /** A 3D part in table coordinates; pure data so it can be tested without three.js. */
 type DressingPart =
@@ -94,7 +94,7 @@ export function buildDressing(table: TableDef): DressingPart[] {
                 elevation: RAMP_LIFT,
                 height: 0.004,
                 thickness: RAMP_WIDTH,
-                material: 'neon',
+                material: 'deck',
             });
             for (const side of [-1, 1]) {
                 parts.push({
