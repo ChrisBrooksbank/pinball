@@ -44,6 +44,8 @@ export function validateTable(table: TableDef): string[] {
     const problems: string[] = [];
     const { width, height } = table.bounds;
 
+    const dropBanks = table.dropBanks ?? [];
+    const saucers = table.saucers ?? [];
     const ids = [
         ...table.walls,
         ...table.arcs,
@@ -52,6 +54,9 @@ export function validateTable(table: TableDef): string[] {
         ...table.slingshots,
         ...table.targets,
         ...table.spinners,
+        ...dropBanks,
+        ...dropBanks.flatMap(b => b.targets),
+        ...saucers,
         ...table.paths,
         ...table.lanes,
         table.plungerLane,
@@ -68,7 +73,13 @@ export function validateTable(table: TableDef): string[] {
         if (lampIds.has(lamp.id)) problems.push(`duplicate lamp id: ${lamp.id}`);
         lampIds.add(lamp.id);
     }
-    const lampRefs = [...table.bumpers, ...table.targets, ...table.lanes];
+    const lampRefs = [
+        ...table.bumpers,
+        ...table.targets,
+        ...table.lanes,
+        ...dropBanks.flatMap(b => b.targets),
+        ...saucers,
+    ];
     for (const e of lampRefs) {
         if (e.lampId !== undefined && !lampIds.has(e.lampId)) {
             problems.push(`${e.id} references missing lamp ${e.lampId}`);
@@ -87,6 +98,7 @@ export function validateTable(table: TableDef): string[] {
         ...table.targets,
         ...table.spinners,
         ...table.lanes,
+        ...dropBanks.flatMap(b => b.targets),
     ]) {
         checkPoint(e.id, e.a);
         checkPoint(e.id, e.b);
@@ -97,7 +109,7 @@ export function validateTable(table: TableDef): string[] {
         for (const p of path.points) checkPoint(path.id, p);
         if (path.points.length < 2) problems.push(`${path.id} needs at least two points`);
     }
-    for (const b of table.bumpers) {
+    for (const b of [...table.bumpers, ...saucers]) {
         const c = b.center;
         if (
             c.x - b.radius < 0 ||

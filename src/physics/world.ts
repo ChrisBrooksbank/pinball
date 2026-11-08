@@ -15,7 +15,7 @@ import {
 } from './materials';
 import { movementCrossesSegment, PolylinePath } from './path';
 import { Plunger, type PlungerConfig } from './plunger';
-import type { ScriptedPathDef } from '../table/types';
+import type { DropTargetBankDef, ScriptedPathDef } from '../table/types';
 import { add, scale, vec2, type Vec2 } from './vec2';
 
 /** Standard gravity in m/s^2. */
@@ -27,6 +27,27 @@ interface Ball {
     radius: number;
     /** Set while the ball is carried along a scripted path (orbit/ramp). */
     path?: { scripted: ScriptedPath; distance: number };
+    /** Set while the ball sits in a saucer awaiting ejection. */
+    captured?: Saucer;
+    /** Saucer the ball was just ejected from; it cannot recapture until the ball clears it. */
+    ejectedFrom?: Saucer;
+}
+
+/** A kickout hole that holds a slow ball until `ejectSaucer` is called. */
+interface Saucer {
+    id: string;
+    center: Vec2;
+    radius: number;
+    /** Balls faster than this (m/s) skip over the hole. */
+    captureSpeed: number;
+}
+
+interface DropBank {
+    id: string;
+    segments: WallSegment[];
+    resetDelay: number;
+    /** Seconds until the cleared bank resets; null while not waiting. */
+    resetTimer: number | null;
 }
 
 interface ScriptedPath {
@@ -41,15 +62,19 @@ interface MovingSurface {
 
 /** Scoring element a collider belongs to; hits on it emit events (and may kick the ball). */
 interface Element {
-    kind: 'bumper' | 'slingshot' | 'target';
+    kind: 'bumper' | 'slingshot' | 'target' | 'dropTarget';
     id: string;
     /** Minimum outward speed (m/s) given to the ball along the contact normal. */
     kick: number;
+    /** Set for drop targets: the owning bank. */
+    bank?: DropBank;
 }
 
 interface WallSegment extends Segment {
     surface: SurfaceType;
     element?: Element;
+    /** A dropped target has no collider until its bank resets. */
+    down?: boolean;
 }
 
 interface PopBumper {
@@ -137,6 +162,8 @@ export class World {
     readonly bumpers: PopBumper[] = [];
     readonly spinners: Spinner[] = [];
     readonly paths: ScriptedPath[] = [];
+    readonly dropBanks: DropBank[] = [];
+    readonly saucers: Saucer[] = [];
     readonly config: WorldConfig;
     readonly events = new EventQueue();
     /** Per-surface material constants; mutable so a tuning panel can adjust them live. */
@@ -221,6 +248,44 @@ export class World {
         return wall;
     }
 
+    /** Bank of drop targets; each hit drops a target, and a cleared bank resets after its delay. */
+    addDropBank(def: DropTargetBankDef): DropBank {
+        const bank: DropBank = {
+            id: def.id,
+            segments: [],
+            resetDelay: def.resetDelay ?? 1,
+            resetTimer: null,
+        };
+        for (const t of def.targets) {
+            bank.segments.push({
+                a: t.a,
+                b: t.b,
+                surface: 'target',
+                element: { kind: 'dropTarget', id: t.id, kick: 0, bank },
+            });
+        }
+        this.segments.push(...bank.segments);
+        this.dropBanks.push(bank);
+        return bank;
+    }
+
+    addSaucer(id: string, center: Vec2, radius: number, captureSpeed = 3): Saucer {
+        const saucer = { id, center, radius, captureSpeed };
+        this.saucers.push(saucer);
+        return saucer;
+    }
+
+    /** Release the ball held in a saucer along `angle` (radians, table space) at `speed` m/s. */
+    ejectSaucer(id: string, angle: number, speed: number): boolean {
+        const ball = this.balls.find(b => b.captured?.id === id);
+        if (!ball?.captured) return false;
+        ball.ejectedFrom = ball.captured;
+        ball.captured = undefined;
+        ball.vel = vec2(Math.cos(angle) * speed, Math.sin(angle) * speed);
+        this.events.push({ type: 'saucerEject', id, ballId: this.balls.indexOf(ball) });
+        return true;
+    }
+
     addSpinner(id: string, a: Vec2, b: Vec2, gain = 40, damping = 1.5): Spinner {
         const spinner = { id, a, b, angularVelocity: 0, gain, damping };
         this.spinners.push(spinner);
@@ -264,7 +329,9 @@ export class World {
         this.nudgeCount = Math.max(0, this.nudgeCount - this.config.nudgeDecay * dt);
         for (const flipper of this.flippers) flipper.step(dt);
         for (const plunger of this.plungers) plunger.step(dt);
+        this.stepDropBanks(dt);
         for (const ball of this.balls) {
+            if (ball.captured) continue;
             if (ball.path) {
                 this.advanceOnPath(ball, dt);
                 continue;
@@ -275,10 +342,44 @@ export class World {
             this.resolvePlungerPenetration(ball, dt);
             this.checkSpinners(ball, dt);
             this.moveBall(ball, dt);
+            this.checkSaucers(ball);
         }
         this.collideBalls();
         for (const sp of this.spinners) {
             sp.angularVelocity *= Math.max(0, 1 - sp.damping * dt);
+        }
+    }
+
+    private stepDropBanks(dt: number): void {
+        for (const bank of this.dropBanks) {
+            if (bank.resetTimer === null) continue;
+            bank.resetTimer -= dt;
+            if (bank.resetTimer > 0) continue;
+            bank.resetTimer = null;
+            for (const seg of bank.segments) seg.down = false;
+            this.events.push({ type: 'dropBankReset', id: bank.id });
+        }
+    }
+
+    /** Capture a slow ball whose centre has entered a saucer. */
+    private checkSaucers(ball: Ball): void {
+        for (const saucer of this.saucers) {
+            const dist = Math.hypot(ball.pos.x - saucer.center.x, ball.pos.y - saucer.center.y);
+            if (ball.ejectedFrom === saucer) {
+                if (dist > saucer.radius + ball.radius) ball.ejectedFrom = undefined;
+                continue;
+            }
+            if (dist >= saucer.radius) continue;
+            if (Math.hypot(ball.vel.x, ball.vel.y) > saucer.captureSpeed) continue;
+            ball.captured = saucer;
+            ball.pos = vec2(saucer.center.x, saucer.center.y);
+            ball.vel = vec2();
+            this.events.push({
+                type: 'saucerCapture',
+                id: saucer.id,
+                ballId: this.balls.indexOf(ball),
+            });
+            return;
         }
     }
 
@@ -374,6 +475,7 @@ export class World {
             let bestSurface: SurfaceType = 'wall';
             let bestElement: Element | null = null;
             for (const seg of this.segments) {
+                if (seg.down) continue;
                 const hit = sweepCircleSegment(ball.pos, d, ball.radius, seg);
                 if (hit && (!best || hit.t < best.t)) {
                     best = hit;
@@ -459,6 +561,22 @@ export class World {
             case 'target':
                 this.events.push({ type: 'targetHit', id: element.id, ballId });
                 break;
+            case 'dropTarget':
+                this.dropTarget(element, ballId);
+                break;
+        }
+    }
+
+    private dropTarget(element: Element, ballId: number): void {
+        const bank = element.bank;
+        if (!bank) return;
+        const seg = bank.segments.find(s => s.element === element);
+        if (!seg) return;
+        seg.down = true;
+        this.events.push({ type: 'dropTargetHit', id: element.id, bankId: bank.id, ballId });
+        if (bank.segments.every(s => s.down)) {
+            bank.resetTimer = bank.resetDelay;
+            this.events.push({ type: 'dropBankCleared', id: bank.id });
         }
     }
 

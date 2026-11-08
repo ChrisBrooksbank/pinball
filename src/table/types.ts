@@ -23,6 +23,8 @@ export interface ArcDef {
 export interface FlipperDef {
     id: string;
     side: 'left' | 'right';
+    /** Playfield level; omitted means the lower playfield. Upper flippers share the side's button. */
+    level?: 'lower' | 'upper';
     config: FlipperConfig;
 }
 
@@ -45,6 +47,22 @@ export interface TargetDef {
     id: string;
     a: Vec2;
     b: Vec2;
+    lampId?: string;
+}
+
+/** A bank of drop targets: a hit drops a target; clearing the bank resets all after a delay. */
+export interface DropTargetBankDef {
+    id: string;
+    targets: { id: string; a: Vec2; b: Vec2; lampId?: string }[];
+    /** Seconds after the bank is cleared before it resets (default 1). */
+    resetDelay?: number;
+}
+
+/** A kickout saucer (hole): captures a slow ball until the rules eject it. */
+export interface SaucerDef {
+    id: string;
+    center: Vec2;
+    radius: number;
     lampId?: string;
 }
 
@@ -117,6 +135,8 @@ export interface TableDef {
     slingshots: SlingshotDef[];
     targets: TargetDef[];
     spinners: SpinnerDef[];
+    dropBanks?: DropTargetBankDef[];
+    saucers?: SaucerDef[];
     paths: ScriptedPathDef[];
     lanes: LaneDef[];
     plungerLane: PlungerLaneDef;

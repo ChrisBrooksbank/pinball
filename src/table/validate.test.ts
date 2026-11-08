@@ -84,4 +84,23 @@ describe('validateTable', () => {
         t.walls.push({ id: 'w3', a: vec2(0.2, 0.8), b: vec2(0.2, 0.9) });
         expect(validateTable(t)).toContain('flipper fl overlaps wall w3');
     });
+
+    it('validates drop banks and saucers (ids, lamps, bounds)', () => {
+        const t = makeTable();
+        t.dropBanks = [
+            {
+                id: 'b1',
+                targets: [
+                    { id: 'dt1', a: vec2(0.1, 0.3), b: vec2(0.1, 0.35), lampId: 'nope' },
+                    { id: 'dt2', a: vec2(0.9, 0.3), b: vec2(0.9, 0.35) },
+                ],
+            },
+        ];
+        t.saucers = [{ id: 's1', center: vec2(0.01, 0.5), radius: 0.03 }];
+        const problems = validateTable(t);
+        expect(problems).toContain('duplicate element id: b1');
+        expect(problems).toContain('dt1 references missing lamp nope');
+        expect(problems).toContain('dt2 is outside table bounds');
+        expect(problems).toContain('s1 is outside table bounds');
+    });
 });

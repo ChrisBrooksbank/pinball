@@ -72,3 +72,55 @@ describe('table elements', () => {
         expect(Math.sign(s1.angularVelocity)).toBe(-Math.sign(s2.angularVelocity));
     });
 });
+
+describe('drop target banks and saucers', () => {
+    const bank = {
+        id: 'bank',
+        resetDelay: 0.5,
+        targets: [
+            { id: 'd1', a: vec2(-0.1, 0), b: vec2(0.1, 0) },
+            { id: 'd2', a: vec2(-0.1, -0.2), b: vec2(0.1, -0.2) },
+        ],
+    };
+
+    it('drops hit targets so the ball passes through, then clears and resets the bank', () => {
+        const world = new World({ tiltDegrees: 0 });
+        world.addDropBank(bank);
+        world.addBall(vec2(0, 0.3), vec2(0, -2));
+        run(world, 200);
+        expect(world.events.drain().map(e => e.type)).toEqual(['dropTargetHit']);
+        // The dropped target no longer blocks: the next ball passes it and hits the second.
+        const ball = world.addBall(vec2(0, 0.3), vec2(0, -2));
+        run(world, 300);
+        expect(ball.vel.y).toBeGreaterThan(0); // bounced off the second target, past the first
+        expect(world.events.drain().map(e => e.type)).toEqual(['dropTargetHit', 'dropBankCleared']);
+        run(world, 600);
+        expect(world.events.drain().map(e => e.type)).toEqual(['dropBankReset']);
+        const again = world.addBall(vec2(0, 0.3), vec2(0, -2));
+        run(world, 200);
+        expect(again.vel.y).toBeGreaterThan(0);
+    });
+
+    it('captures a slow ball in a saucer and ejects it', () => {
+        const world = new World({ tiltDegrees: 0 });
+        world.addSaucer('s1', vec2(0, 0), 0.03);
+        const ball = world.addBall(vec2(-0.1, 0), vec2(1, 0));
+        run(world);
+        expect(ball.pos).toEqual(vec2(0, 0));
+        expect(ball.vel).toEqual(vec2());
+        expect(world.events.drain().map(e => e.type)).toEqual(['saucerCapture']);
+        expect(world.ejectSaucer('s1', -Math.PI / 2, 2)).toBe(true);
+        expect(world.ejectSaucer('s1', 0, 2)).toBe(false);
+        run(world, 100);
+        expect(ball.pos.y).toBeLessThan(-0.1);
+        expect(world.events.drain().map(e => e.type)).toEqual(['saucerEject']);
+    });
+
+    it('lets a fast ball skip over a saucer', () => {
+        const world = new World({ tiltDegrees: 0 });
+        world.addSaucer('s1', vec2(0, 0), 0.03);
+        const ball = world.addBall(vec2(-0.1, 0), vec2(6, 0));
+        run(world);
+        expect(ball.pos.x).toBeGreaterThan(0.2);
+    });
+});
