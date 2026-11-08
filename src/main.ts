@@ -1,4 +1,5 @@
 import { ACESFilmicToneMapping, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
+import { Sfx } from '@/audio/sfx';
 import { FixedStepper } from '@core/loop';
 import { createDebugPanel } from '@/debug-panel';
 import { TableSim } from '@physics/table-sim';
@@ -46,8 +47,14 @@ status.style.cssText =
     'position:fixed;top:8px;left:8px;color:#0f0;font:16px monospace;pointer-events:none';
 document.body.appendChild(status);
 
+const sfx = new Sfx(() => new AudioContext());
+const unlockAudio = (): void => sfx.unlock();
+window.addEventListener('pointerdown', unlockAudio);
+window.addEventListener('keydown', unlockAudio);
+
 const actions = new ActionState((action, down) => {
     canvas.dataset[action] = down ? 'down' : 'up'; // observable by e2e tests
+    if (down && (action === 'flipperLeft' || action === 'flipperRight')) sfx.play('flipper');
     if (action === 'flipperLeft') sandbox.left.setHeld(down);
     else if (action === 'flipperRight') sandbox.right.setHeld(down);
     else if (action === 'plunger') {
@@ -60,6 +67,7 @@ function pads(): readonly (PadLike | null)[] {
     return typeof navigator.getGamepads === 'function' ? Array.from(navigator.getGamepads()) : [];
 }
 function onKey(down: boolean, e: KeyboardEvent): void {
+    if (down && !e.repeat && e.code === 'KeyM') sfx.toggleMute();
     if (handleKey(actions, down, e)) e.preventDefault();
 }
 window.addEventListener('keydown', e => onKey(true, e));
@@ -88,6 +96,7 @@ renderer.setAnimationLoop(now => {
         sandbox.step(1 / 1000);
     });
     game.update(frame);
+    for (const name of game.takeSounds()) sfx.play(name);
     status.textContent = `${game.displayText}  ${game.rules.score}`;
     dmd.update(
         {

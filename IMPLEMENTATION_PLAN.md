@@ -92,7 +92,7 @@ Every spec requirement is unimplemented.
 - [x] Gamepad mapping with rumble where available; unit test with mocked gamepad (spec: presentation.md)
 - [x] Accelerometer nudge with iOS permission via user gesture (spec: presentation.md)
 - [x] Playwright interaction test: flipper key and touch zone both trigger flipper action (spec: presentation.md)
-- [ ] Procedural WebAudio sfx (flipper, bumper, slingshot, target, spinner, drain), unlock-on-first-gesture, mute toggle (spec: presentation.md)
+- [x] Procedural WebAudio sfx (flipper, bumper, slingshot, target, spinner, drain), unlock-on-first-gesture, mute toggle (spec: presentation.md)
 - [ ] Chiptune-style music (spec: presentation.md)
 - [ ] High-score storage (localStorage top 10, injectable storage) with unit tests (spec: presentation.md)
 - [ ] Initials entry UI on game over (spec: presentation.md)
