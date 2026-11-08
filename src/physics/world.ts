@@ -98,9 +98,22 @@ function applyContactLoss(
 interface WorldConfig {
     /** Playfield tilt from horizontal, in degrees. */
     tiltDegrees: number;
+    /** Velocity change (m/s) a nudge gives every ball. */
+    nudgeImpulse: number;
+    /** Nudge counter value above which the table tilts. */
+    nudgeTiltLimit: number;
+    /** Nudge counter decay per second. */
+    nudgeDecay: number;
 }
 
-const DEFAULT_WORLD_CONFIG: WorldConfig = { tiltDegrees: 6.5 };
+const DEFAULT_WORLD_CONFIG: WorldConfig = {
+    tiltDegrees: 6.5,
+    nudgeImpulse: 0.3,
+    nudgeTiltLimit: 3,
+    nudgeDecay: 1,
+};
+
+type NudgeDirection = 'left' | 'right' | 'up';
 
 /** Table space: x right, y toward the player (down-screen). Units are metres. */
 export class World {
@@ -118,6 +131,34 @@ export class World {
 
     constructor(config: Partial<WorldConfig> = {}) {
         this.config = { ...DEFAULT_WORLD_CONFIG, ...config };
+    }
+
+    /** Recent-nudge counter (+1 per nudge, decays over time); tilts when above the limit. */
+    nudgeCount = 0;
+    /** True once the table has tilted; further nudges are ignored until `resetTilt`. */
+    tilted = false;
+
+    /** Shove the table: a brief impulse on every ball, counting toward a tilt. */
+    nudge(direction: NudgeDirection): void {
+        if (this.tilted) return;
+        const dv = this.config.nudgeImpulse;
+        const kick =
+            direction === 'left'
+                ? vec2(-dv, 0)
+                : direction === 'right'
+                  ? vec2(dv, 0)
+                  : vec2(0, -dv);
+        for (const ball of this.balls) ball.vel = add(ball.vel, kick);
+        this.nudgeCount += 1;
+        if (this.nudgeCount > this.config.nudgeTiltLimit) {
+            this.tilted = true;
+            this.events.push({ type: 'tilt' });
+        }
+    }
+
+    resetTilt(): void {
+        this.tilted = false;
+        this.nudgeCount = 0;
     }
 
     /** Acceleration along the table's down-slope (+y) from the tilt angle. */
@@ -200,6 +241,7 @@ export class World {
     /** Advance the simulation by `dt` seconds (semi-implicit Euler with swept segment collisions). */
     step(dt: number): void {
         const g = this.gravityAlongTable;
+        this.nudgeCount = Math.max(0, this.nudgeCount - this.config.nudgeDecay * dt);
         for (const flipper of this.flippers) flipper.step(dt);
         for (const plunger of this.plungers) plunger.step(dt);
         for (const ball of this.balls) {
