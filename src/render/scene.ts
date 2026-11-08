@@ -8,9 +8,15 @@ import {
     Mesh,
     MeshStandardMaterial,
     Object3D,
+    DataTexture,
+    MeshBasicMaterial,
+    NearestFilter,
     PlaneGeometry,
     PointLight,
+    RGBAFormat,
+    SRGBColorSpace,
     SphereGeometry,
+    type Texture,
 } from 'three';
 import { LampBank } from '@core/lamps';
 import type { TableSim } from '@physics/table-sim';
@@ -21,9 +27,35 @@ const LAMP_ON = 2.2;
 const LAMP_OFF = 0.08;
 const ARC_SEGMENT_ANGLE = Math.PI / 24;
 
+const BACKGLASS_HEIGHT_RATIO = 0.6;
+const BACKGLASS_TEXTURE_SIZE = { width: 64, height: 32 } as const;
+
+/** Headless-safe placeholder art: neon stripes over a dark panel, swapped for the DMD texture later. */
+function createBackglassTexture(): Texture {
+    const { width, height } = BACKGLASS_TEXTURE_SIZE;
+    const data = new Uint8Array(width * height * 4);
+    const hex = (c: number): [number, number, number] => [(c >> 16) & 255, (c >> 8) & 255, c & 255];
+    const dark = hex(PALETTE.playfield);
+    const stripes = [hex(PALETTE.magenta), hex(PALETTE.cyan), hex(PALETTE.gold)];
+    for (let y = 0; y < height; y++) {
+        const stripe = y % 8 === 0 ? stripes[Math.floor(y / 8) % stripes.length] : undefined;
+        const [r, g, b] = stripe ?? dark;
+        for (let x = 0; x < width; x++) {
+            data.set([r, g, b, 255], (y * width + x) * 4);
+        }
+    }
+    const texture = new DataTexture(data, width, height, RGBAFormat);
+    texture.colorSpace = SRGBColorSpace;
+    texture.magFilter = NearestFilter;
+    texture.needsUpdate = true;
+    return texture;
+}
+
 interface TableScene {
     /** Root group containing every table mesh and the lights. */
     readonly root: Group;
+    /** Upright panel behind the playfield; assign `material.map` to show the DMD. */
+    readonly backglass: Mesh<PlaneGeometry, MeshBasicMaterial>;
     /** Insert lights by table lamp id; call `lamps.update(dt)` each frame, then `sync()`. */
     readonly lamps: LampBank;
     /** Copy dynamic physics state (flippers, plunger, balls) onto the meshes. */
@@ -86,6 +118,15 @@ export function buildTableScene(sim: TableSim): TableScene {
     );
     playfield.rotation.x = -Math.PI / 2;
     root.add(playfield);
+
+    const backglassHeight = table.bounds.width * BACKGLASS_HEIGHT_RATIO;
+    const backglass = new Mesh(
+        new PlaneGeometry(table.bounds.width, backglassHeight),
+        new MeshBasicMaterial({ map: createBackglassTexture() })
+    );
+    // Standing upright at the far (y = 0) edge of the table, facing the player.
+    backglass.position.set(0, backglassHeight / 2, -cy);
+    root.add(backglass);
 
     const bar = (
         a: Vec2,
@@ -219,5 +260,5 @@ export function buildTableScene(sim: TableSim): TableScene {
     };
     sync();
 
-    return { root, lamps, sync };
+    return { root, backglass, lamps, sync };
 }

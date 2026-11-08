@@ -58,6 +58,19 @@ describe('retro look', () => {
     });
 });
 
+describe('backglass', () => {
+    it('stands upright behind the playfield with a placeholder texture', () => {
+        const scene = buildTableScene(new TableSim(PLAYFIELD));
+        const { backglass } = scene;
+        expect(scene.root.children).toContain(backglass);
+        expect(backglass.material.map).not.toBeNull();
+        expect(backglass.position.z).toBe(-PLAYFIELD.bounds.height / 2);
+        const height = backglass.geometry.parameters.height;
+        expect(backglass.position.y).toBeCloseTo(height / 2);
+        expect(backglass.geometry.parameters.width).toBe(PLAYFIELD.bounds.width);
+    });
+});
+
 describe('lamps', () => {
     it('drives insert emissive intensity from lamp state', () => {
         const sim = new TableSim(PLAYFIELD);
