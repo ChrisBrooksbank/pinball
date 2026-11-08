@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RulesEngine } from '@rules/engine';
-import { BUMPER_RUSH, MISSIONS, SPIN_CYCLE } from '@rules/missions';
+import { BUMPER_RUSH, MISSIONS, SLING_SHOT, SPIN_CYCLE } from '@rules/missions';
 
 function playing(): RulesEngine {
     const engine = new RulesEngine();
@@ -87,5 +87,47 @@ describe('mission 2: spin cycle', () => {
         const commands = engine.handle({ type: 'tick', dt: SPIN_CYCLE.timeLimit + 1 });
         expect(engine.missionState.isCompleted('spin-cycle')).toBe(false);
         expect(commands).toContainEqual({ type: 'display', text: 'SPIN CYCLE FAILED' });
+    });
+});
+
+const lane = (e: RulesEngine, id: string) => e.handle({ type: 'laneEnter', id, ballId: 0 });
+const sling = (e: RulesEngine) =>
+    e.handle({ type: 'slingshot', id: 'sling-left', ballId: 0, speed: 1 });
+
+describe('mission 3: sling shot', () => {
+    it('is registered', () => {
+        expect(MISSIONS).toContain(SLING_SHOT);
+    });
+
+    it('starts after two inlane hits, not outlanes', () => {
+        const wrong = playing();
+        lane(wrong, 'outlane-left');
+        lane(wrong, 'outlane-right');
+        expect(wrong.missionState.activeId).toBeNull();
+
+        const engine = playing();
+        lane(engine, 'inlane-left');
+        const commands = lane(engine, 'inlane-right');
+        expect(engine.missionState.activeId).toBe('sling-shot');
+        expect(commands).toContainEqual({ type: 'display', text: 'SLING SHOT START' });
+    });
+
+    it('completes after eight slingshot hits and awards points', () => {
+        const engine = playing();
+        lane(engine, 'inlane-left');
+        lane(engine, 'inlane-right');
+        const before = engine.score;
+        for (let i = 0; i < 8; i++) sling(engine);
+        expect(engine.missionState.isCompleted('sling-shot')).toBe(true);
+        expect(engine.score).toBeGreaterThanOrEqual(before + SLING_SHOT.award);
+    });
+
+    it('fails when the timer expires', () => {
+        const engine = playing();
+        lane(engine, 'inlane-left');
+        lane(engine, 'inlane-right');
+        const commands = engine.handle({ type: 'tick', dt: SLING_SHOT.timeLimit + 1 });
+        expect(engine.missionState.isCompleted('sling-shot')).toBe(false);
+        expect(commands).toContainEqual({ type: 'display', text: 'SLING SHOT FAILED' });
     });
 });

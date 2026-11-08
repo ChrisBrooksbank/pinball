@@ -76,7 +76,7 @@ Every spec requirement is unimplemented.
 - [x] Mode system framework: missions started by shot sequences, timers, progress persisted across balls (spec: game-rules.md)
 - [x] Mission 1: Bumper Rush (3 target hits qualify, 10 bumper hits in 30s) with unit test (spec: game-rules.md)
 - [x] Mission 2 (add to `src/rules/missions.ts`), with unit test (spec: game-rules.md)
-- [ ] Mission 3 (add to `src/rules/missions.ts`), with unit test (spec: game-rules.md)
+- [x] Mission 3 (add to `src/rules/missions.ts`), with unit test (spec: game-rules.md)
 - [ ] Combo shots for chained orbit/ramp hits (spec: game-rules.md)
 - [ ] Multiball (2-3 balls) start/end, jackpot, super-jackpot; tests (spec: game-rules.md)
 - [ ] Wizard mode unlocked by completing all missions; test (spec: game-rules.md)

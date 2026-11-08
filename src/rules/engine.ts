@@ -17,6 +17,7 @@ const SHOT_EVENTS: ReadonlySet<string> = new Set([
     'bumperHit',
     'targetHit',
     'spinnerSpin',
+    'slingshot',
     'laneEnter',
     'pathExit',
 ]);
