@@ -1,0 +1,61 @@
+{
+    "name": "pinball",
+    "version": "0.1.0",
+    "description": "Retro 70s/80s arcade pinball in the browser: TypeScript, Vite, three.js, custom 2D physics solver",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "preview": "vite preview",
+        "test": "vitest",
+        "test:run": "vitest run",
+        "test:coverage": "vitest run --coverage",
+        "test:e2e": "playwright test",
+        "test:e2e:ui": "playwright test --ui",
+        "test:e2e:update-snapshots": "playwright test --update-snapshots",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "typecheck": "tsc --noEmit",
+        "knip": "knip",
+        "check": "npm run typecheck && npm run lint && npm run format:check && npm run knip",
+        "prepare": "husky"
+    },
+    "dependencies": {
+        "three": "^0.170.0"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.0.0",
+        "@playwright/test": "^1.48.0",
+        "@types/node": "^22.0.0",
+        "@types/three": "^0.170.0",
+        "@vitest/coverage-v8": "^5.1.0",
+        "eslint": "^9.0.0",
+        "eslint-config-prettier": "^10.0.0",
+        "globals": "^16.0.0",
+        "husky": "^9.0.0",
+        "jsdom": "^25.0.0",
+        "knip": "^5.0.0",
+        "lint-staged": "^15.0.0",
+        "prettier": "^3.0.0",
+        "typescript": "^5.0.0",
+        "typescript-eslint": "^8.0.0",
+        "vite": "^6.0.0",
+        "vite-tsconfig-paths": "^5.0.0",
+        "vitest": "^5.1.0"
+    },
+    "lint-staged": {
+        "*.{js,ts,tsx}": [
+            "eslint --fix",
+            "prettier --write"
+        ],
+        "*.{json,md,yml,yaml}": [
+            "prettier --write"
+        ]
+    },
+    "engines": {
+        "node": ">=20.0.0"
+    }
+}
