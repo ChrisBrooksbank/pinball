@@ -34,7 +34,7 @@ Every spec requirement is unimplemented.
 
 ### Phase 1: physics-feel
 
-- [ ] Add `src/physics` skeleton: vec2 helpers, `Ball` state, `World` with `step(dt)`, gravity along tilt angle (default 6.5°, configurable), no collisions yet; test free-fall/incline acceleration (spec: physics-feel.md)
+- [x] Add `src/physics` skeleton: vec2 helpers, `Ball` state, `World` with `step(dt)`, gravity along tilt angle (default 6.5°, configurable), no collisions yet; test free-fall/incline acceleration (spec: physics-feel.md)
 - [ ] Typed physics event queue (`PhysicsEvent` union: bumperHit, targetHit, spinnerSpin, slingshot, drain, etc.) with push/drain API; types in shared module (spec: physics-feel.md)
 - [ ] Material constants per surface type (restitution, friction, rolling damping) in a `materials` module, exposed as mutable tuning params (spec: physics-feel.md)
 - [ ] Swept circle-vs-segment collision with restitution response; test wall bounce restitution (spec: physics-feel.md)
