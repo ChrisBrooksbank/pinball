@@ -3,6 +3,7 @@ import { FixedStepper } from '@core/loop';
 import { createDebugPanel } from '@/debug-panel';
 import { TableSim } from '@physics/table-sim';
 import { applyCameraFraming } from '@render/camera';
+import { DmdDisplay } from '@render/dmd';
 import { createChromeEnvironment } from '@render/environment';
 import { createPostProcessing } from '@render/post';
 import { chooseRenderQuality } from '@render/quality';
@@ -30,6 +31,9 @@ const debugPanel = createDebugPanel(sandbox);
 
 const tableScene = buildTableScene(sandbox);
 scene.add(tableScene.root);
+const dmd = new DmdDisplay();
+tableScene.backglass.material.map = dmd.texture;
+tableScene.backglass.material.needsUpdate = true;
 const post = createPostProcessing(renderer, scene, camera);
 const game = new GameDriver(sandbox, tableScene.lamps);
 const status = document.createElement('div');
@@ -80,6 +84,11 @@ renderer.setAnimationLoop(now => {
     });
     game.update(frame);
     status.textContent = `${game.displayText}  ${game.rules.score}`;
+    dmd.update({
+        score: game.rules.score,
+        ball: game.rules.phase === 'attract' ? 0 : game.rules.ballNumber,
+        text: game.displayText,
+    });
     tableScene.lamps.update(frame);
     tableScene.sync();
     debugPanel.update();
