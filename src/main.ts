@@ -11,6 +11,7 @@ import { buildTableScene } from '@render/scene';
 import { PLAYFIELD } from '@/table/playfield';
 import { GameDriver } from '@/game-driver';
 import { ActionState } from '@/input/actions';
+import { GamepadInput, type PadLike } from '@/input/gamepad';
 import { handleKey } from '@/input/keyboard';
 import { attachTouch } from '@/input/touch';
 
@@ -47,9 +48,15 @@ document.body.appendChild(status);
 const actions = new ActionState((action, down) => {
     if (action === 'flipperLeft') sandbox.left.setHeld(down);
     else if (action === 'flipperRight') sandbox.right.setHeld(down);
-    else if (action === 'plunger') sandbox.plunger.setHeld(down);
-    else if (down) game.pressStart();
+    else if (action === 'plunger') {
+        sandbox.plunger.setHeld(down);
+        if (!down) gamepad.rumble(pads(), 0.4, 60);
+    } else if (down) game.pressStart();
 });
+const gamepad = new GamepadInput(actions);
+function pads(): readonly (PadLike | null)[] {
+    return typeof navigator.getGamepads === 'function' ? Array.from(navigator.getGamepads()) : [];
+}
 function onKey(down: boolean, e: KeyboardEvent): void {
     if (handleKey(actions, down, e)) e.preventDefault();
 }
@@ -73,6 +80,7 @@ let last = performance.now();
 renderer.setAnimationLoop(now => {
     const frame = Math.min((now - last) / 1000, 0.1);
     last = now;
+    gamepad.poll(pads());
     stepper.advance(frame, () => {
         sandbox.step(1 / 1000);
     });
