@@ -17,6 +17,7 @@ import {
     WebGLRenderer,
 } from 'three';
 import { FixedStepper } from '@core/loop';
+import { createDebugPanel } from '@/debug-panel';
 import { SANDBOX_HEIGHT, SANDBOX_WIDTH, Sandbox } from '@physics/sandbox';
 
 const canvas = document.getElementById('game');
@@ -33,6 +34,7 @@ camera.lookAt(0, 0, 0.05);
 const CENTER_X = SANDBOX_WIDTH / 2;
 const CENTER_Y = SANDBOX_HEIGHT / 2;
 const sandbox = new Sandbox();
+const debugPanel = createDebugPanel(sandbox);
 
 const table = new Mesh(
     new PlaneGeometry(SANDBOX_WIDTH, SANDBOX_HEIGHT),
@@ -165,5 +167,6 @@ renderer.setAnimationLoop(now => {
     });
     sandbox.world.events.drain();
     syncScene();
+    debugPanel.update();
     renderer.render(scene, camera);
 });

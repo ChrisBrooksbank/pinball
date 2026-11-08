@@ -48,7 +48,7 @@ Every spec requirement is unimplemented.
 - [x] Pop bumpers (radial kick + event), slingshots (kick along normal + event), standup targets, spinner (angular velocity + spin events) as collision elements (spec: physics-feel.md) — split into 2 iterations if large
 - [x] Nudge (left/right/up) as brief table impulse on ball(s), nudge counter with decay, tilt event after repeated nudges (spec: physics-feel.md)
 - [x] Wire physics into `main.ts` step loop with a temporary sandbox playfield (two flippers, plunger, walls, one bumper), keyboard flipper/plunger controls so ball can be plunged, played, drained (spec: physics-feel.md)
-- [ ] Debug overlay + tuning panel (hidden, toggled by key) with live sliders for flipper strength, restitution, friction, tilt angle (spec: physics-feel.md)
+- [x] Debug overlay + tuning panel (hidden, toggled by key) with live sliders for flipper strength, restitution, friction, tilt angle (spec: physics-feel.md)
 - [ ] Simple circle-circle ball-ball collision for multiball (spec: physics-feel.md)
 
 ### Phase 2: table-layout
