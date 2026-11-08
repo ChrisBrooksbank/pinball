@@ -150,4 +150,25 @@ describe('World', () => {
         world.config.tiltDegrees = 10;
         expect(world.gravityAlongTable.y).toBeCloseTo(9.81 * Math.sin((10 * Math.PI) / 180), 10);
     });
+
+    it('is deterministic: identical setups give bit-identical trajectories', () => {
+        const run = (): number[] => {
+            const world = new World();
+            world.addSegment(vec2(-0.3, 0.5), vec2(0.3, 0.45), 'rubber');
+            world.addSegment(vec2(-0.3, -1), vec2(-0.3, 1));
+            world.addSegment(vec2(0.3, -1), vec2(0.3, 1));
+            world.addArc(vec2(0, -0.6), 0.3, Math.PI, Math.PI);
+            const a = world.addBall(vec2(-0.1, -0.3), vec2(1.3, -2.1));
+            const b = world.addBall(vec2(0.1, -0.2), vec2(-0.7, 1.9));
+            const trace: number[] = [];
+            for (let i = 0; i < 5000; i++) {
+                world.step(0.001);
+                if (i % 50 === 0) trace.push(a.pos.x, a.pos.y, a.vel.x, a.vel.y, b.pos.x, b.pos.y);
+            }
+            return trace;
+        };
+        const first = run();
+        expect(first.length).toBeGreaterThan(0);
+        expect(run()).toEqual(first);
+    });
 });

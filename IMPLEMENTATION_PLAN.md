@@ -40,7 +40,7 @@ Every spec requirement is unimplemented.
 - [x] Swept circle-vs-segment collision with restitution response; test wall bounce restitution (spec: physics-feel.md)
 - [x] Swept circle-vs-arc (and endpoint/corner) collision; test curved guide, no tunnelling at 10x speed against segments and arcs (spec: physics-feel.md)
 - [x] Friction and rolling damping applied on contact/surface; sub-stepping/TOI loop for multiple contacts per step (spec: physics-feel.md)
-- [ ] Determinism test: two `World` runs with identical input sequences give identical positions (spec: physics-feel.md)
+- [x] Determinism test: two `World` runs with identical input sequences give identical positions (spec: physics-feel.md)
 - [ ] Flipper as rotating capsule: rest/up angles, swing-up speed, hold, angular velocity tracked per step (spec: physics-feel.md)
 - [ ] Flipper collision response using contact-point velocity from angular velocity; test resting ball flicked faster when flipper swings (spec: physics-feel.md)
 - [ ] Flipper behaviours: cradle/trap (hold ball while raised, no jitter) and flick-pass (flipper-end release); tests for each (spec: physics-feel.md)
