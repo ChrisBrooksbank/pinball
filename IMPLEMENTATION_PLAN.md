@@ -81,7 +81,7 @@ Every spec requirement is unimplemented.
 - [x] Multiball (2-3 balls) start/end, jackpot, super-jackpot; tests (spec: game-rules.md)
 - [x] Wizard mode unlocked by completing all missions; test (spec: game-rules.md)
 - [x] Scripted full-game test with no browser (spec: game-rules.md)
-- [ ] Wire rules into main: physics events in, commands out to lamps/physics (spec: game-rules.md)
+- [x] Wire rules into main: physics events in, commands out to lamps/physics (spec: game-rules.md)
 
 ### Phase 4: presentation
 

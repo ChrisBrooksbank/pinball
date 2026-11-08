@@ -28,6 +28,8 @@ export class TableSim {
     readonly left: Flipper;
     readonly right: Flipper;
     readonly plunger: Plunger;
+    /** Serve a new ball whenever the table empties. Turn off when the rules own ball serving. */
+    autoServe = true;
 
     constructor(readonly table: TableDef) {
         this.world = buildWorld(table);
@@ -45,7 +47,11 @@ export class TableSim {
 
     /** Put a fresh ball on the plunger. */
     serve(): void {
-        this.world.addBall(this.table.plungerLane.ballStart, undefined, this.table.ballRadius);
+        this.world.addBall(
+            { ...this.table.plungerLane.ballStart },
+            undefined,
+            this.table.ballRadius
+        );
     }
 
     step(dt: number): void {
@@ -56,7 +62,7 @@ export class TableSim {
             if (ball && ball.pos.y > this.table.drain.y) {
                 balls.splice(i, 1);
                 events.push({ type: 'drain', ballId: i });
-                if (balls.length === 0) this.serve();
+                if (balls.length === 0 && this.autoServe) this.serve();
             }
         }
     }

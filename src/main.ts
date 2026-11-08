@@ -8,6 +8,7 @@ import { createPostProcessing } from '@render/post';
 import { chooseRenderQuality } from '@render/quality';
 import { buildTableScene } from '@render/scene';
 import { PLAYFIELD } from '@/table/playfield';
+import { GameDriver } from '@/game-driver';
 
 const canvas = document.getElementById('game');
 if (!(canvas instanceof HTMLCanvasElement)) {
@@ -30,6 +31,11 @@ const debugPanel = createDebugPanel(sandbox);
 const tableScene = buildTableScene(sandbox);
 scene.add(tableScene.root);
 const post = createPostProcessing(renderer, scene, camera);
+const game = new GameDriver(sandbox, tableScene.lamps);
+const status = document.createElement('div');
+status.style.cssText =
+    'position:fixed;top:8px;left:8px;color:#0f0;font:16px monospace;pointer-events:none';
+document.body.appendChild(status);
 
 const KEY_ACTIONS: Record<string, 'left' | 'right' | 'plunger'> = {
     ShiftLeft: 'left',
@@ -42,6 +48,7 @@ const KEY_ACTIONS: Record<string, 'left' | 'right' | 'plunger'> = {
     ArrowDown: 'plunger',
 };
 function onKey(down: boolean, e: KeyboardEvent): void {
+    if (down && e.code === 'Enter' && !e.repeat) game.pressStart();
     const action = KEY_ACTIONS[e.code];
     if (!action) return;
     e.preventDefault();
@@ -71,7 +78,8 @@ renderer.setAnimationLoop(now => {
     stepper.advance(frame, () => {
         sandbox.step(1 / 1000);
     });
-    sandbox.world.events.drain();
+    game.update(frame);
+    status.textContent = `${game.displayText}  ${game.rules.score}`;
     tableScene.lamps.update(frame);
     tableScene.sync();
     debugPanel.update();
