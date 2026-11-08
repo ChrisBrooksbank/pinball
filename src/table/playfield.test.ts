@@ -27,7 +27,7 @@ describe('PLAYFIELD', () => {
 
     it('mirrors the flippers about the playfield centre', () => {
         const [l, r] = PLAYFIELD.flippers.map(f => f.config);
-        expect(l!.pivot.x + r!.pivot.x).toBeCloseTo(0.44);
+        expect(l!.pivot.x + r!.pivot.x).toBeCloseTo(0.88);
         expect(l!.pivot.y).toBe(r!.pivot.y);
     });
 
@@ -37,5 +37,17 @@ describe('PLAYFIELD', () => {
             c.pivot.x + Math.cos(c.restAngle) * c.length;
         const gap = tipX(r!) - tipX(l!) - l!.tipRadius - r!.tipRadius;
         expect(gap).toBeGreaterThan(PLAYFIELD.ballRadius * 2);
+    });
+
+    it('has real-machine proportions in ball diameters', () => {
+        const d = PLAYFIELD.ballRadius * 2;
+        expect(PLAYFIELD.bounds.width / d).toBeGreaterThan(19 * 0.95);
+        expect(PLAYFIELD.bounds.width / d).toBeLessThan(19 * 1.05);
+        expect(PLAYFIELD.bounds.height / d).toBeGreaterThan(40 * 0.95);
+        expect(PLAYFIELD.bounds.height / d).toBeLessThan(40 * 1.05);
+        for (const f of PLAYFIELD.flippers) {
+            expect(f.config.length / d).toBeGreaterThan(2.8 * 0.9);
+            expect(f.config.length / d).toBeLessThan(2.8 * 1.1);
+        }
     });
 });

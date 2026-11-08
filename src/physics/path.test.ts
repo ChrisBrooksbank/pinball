@@ -31,7 +31,7 @@ describe('scripted paths on PLAYFIELD', () => {
 
     it('carries a ball up the ramp and releases it at the exit point', () => {
         const world = buildWorld(PLAYFIELD);
-        world.addBall(vec2(0.22, 0.65), vec2(0, -3), PLAYFIELD.ballRadius);
+        world.addBall(vec2(0.44, 1.3), vec2(0, -3), PLAYFIELD.ballRadius);
         const entered: string[] = [];
         let exited = false;
         for (let i = 0; i < 3000 && !exited; i++) {
@@ -53,7 +53,7 @@ describe('scripted paths on PLAYFIELD', () => {
 
     it('carries a ball around the orbit to its exit', () => {
         const world = buildWorld(PLAYFIELD);
-        world.addBall(vec2(0.035, 0.46), vec2(0, -3), PLAYFIELD.ballRadius);
+        world.addBall(vec2(0.07, 0.92), vec2(0, -3), PLAYFIELD.ballRadius);
         expect(runUntilExit(world, 'orbit-left')).toBeGreaterThan(0);
         const end = orbit.points[orbit.points.length - 1]!;
         expect(world.balls[0]!.pos.x).toBeCloseTo(end.x, 2);
@@ -62,9 +62,9 @@ describe('scripted paths on PLAYFIELD', () => {
 
     it('ignores slow balls and balls crossing the wrong way', () => {
         const slow = buildWorld(PLAYFIELD);
-        slow.addBall(vec2(0.22, 0.65), vec2(0, -0.5), PLAYFIELD.ballRadius);
+        slow.addBall(vec2(0.44, 1.3), vec2(0, -0.5), PLAYFIELD.ballRadius);
         const wrong = buildWorld(PLAYFIELD);
-        wrong.addBall(vec2(0.22, 0.55), vec2(0, 3), PLAYFIELD.ballRadius);
+        wrong.addBall(vec2(0.44, 1.1), vec2(0, 3), PLAYFIELD.ballRadius);
         for (let i = 0; i < 300; i++) {
             slow.step(DT);
             wrong.step(DT);

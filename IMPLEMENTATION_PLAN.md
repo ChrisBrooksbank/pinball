@@ -3,7 +3,7 @@
 ## Status
 
 - Planning iterations: 2 (re-verified: codebase still scaffold-only; plan unchanged)
-- Build iterations: 1
+- Build iterations: 2
 - Last updated: 2026-11-08
 
 ## Gap Analysis (summary)
@@ -97,7 +97,7 @@ table (not shrinking the ball) so flipper length, lane widths and shot gaps matc
 diameters, outlane/inlane gap ~1.5 balls, lane guides 2-3 balls wide).
 
 - [x] Write `specs/table-neon-knight.md`: reference-layout analysis (zones, shot list, lane/target/bumper counts, upper-playfield flow, plunger lane, dimensions in ball diameters), mapped onto our element types; list any new element types needed (upper flipper, magnet-less magna-save substitute, drop-target bank, kickout saucer) (spec: table-layout.md)
-- [ ] Rescale: set real-proportion bounds and ball radius ratio, scale all existing elements, retune flipper dimensions, plunger travel and camera framing; physics tests still pass, add a table-proportion test (ball diameters across, flipper length) (spec: table-layout.md)
+- [x] Rescale: set real-proportion bounds and ball radius ratio, scale all existing elements, retune flipper dimensions, plunger travel and camera framing; physics tests still pass, add a table-proportion test (ball diameters across, flipper length) (spec: table-layout.md)
 - [ ] New element types in `src/table` + physics: drop-target bank (reset on clear), kickout saucer/hole with eject, second-level (upper) playfield flipper; validation + unit tests (spec: table-layout.md)
 - [ ] Author the full-size lower playfield: flippers, inlanes/outlanes, slingshots, return lanes, side-lane guides, target banks (spec: table-layout.md)
 - [ ] Author the upper playfield and orbits: 3 pop bumpers cluster, top lanes/rollovers, upper flipper, spinner, loop/ramp paths updated to new coordinates (spec: table-layout.md)
