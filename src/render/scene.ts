@@ -14,6 +14,7 @@ import {
 } from 'three';
 import type { TableSim } from '@physics/table-sim';
 import type { Vec2 } from '@physics/vec2';
+import { PALETTE } from './palette';
 
 const ARC_SEGMENT_ANGLE = Math.PI / 24;
 
@@ -50,20 +51,43 @@ export function buildTableScene(sim: TableSim): TableScene {
     const lampMaterial = (color: string): MeshStandardMaterial => {
         let material = lampMaterials.get(color);
         if (!material) {
-            material = new MeshStandardMaterial({ color, emissive: color });
+            material = new MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.5 });
             lampMaterials.set(color, material);
         }
         return material;
     };
 
-    const chrome = new MeshStandardMaterial({ color: 0xd8e4ee, metalness: 1, roughness: 0.2 });
-    const neon = new MeshStandardMaterial({ color: 0x35f0ff, emissive: 0x0a5560 });
-    const accent = new MeshStandardMaterial({ color: 0xff3da5, emissive: 0x80154a });
-    const gold = new MeshStandardMaterial({ color: 0xffd23d, emissive: 0x5a4600 });
+    const chrome = new MeshStandardMaterial({
+        color: PALETTE.chrome,
+        metalness: 1,
+        roughness: 0.2,
+    });
+    // Mirror-like ball picks up the scene environment map (set by the renderer host).
+    const ballMaterial = new MeshStandardMaterial({
+        color: 0xffffff,
+        metalness: 1,
+        roughness: 0.05,
+        envMapIntensity: 1.5,
+    });
+    const neon = new MeshStandardMaterial({
+        color: PALETTE.cyan,
+        emissive: PALETTE.cyanGlow,
+        emissiveIntensity: 1.6,
+    });
+    const accent = new MeshStandardMaterial({
+        color: PALETTE.magenta,
+        emissive: PALETTE.magentaGlow,
+        emissiveIntensity: 1.6,
+    });
+    const gold = new MeshStandardMaterial({
+        color: PALETTE.gold,
+        emissive: PALETTE.goldGlow,
+        emissiveIntensity: 1.4,
+    });
 
     const playfield = new Mesh(
         new PlaneGeometry(table.bounds.width, table.bounds.height),
-        new MeshStandardMaterial({ color: 0x1b0f3a, roughness: 0.6 })
+        new MeshStandardMaterial({ color: PALETTE.playfield, roughness: 0.5 })
     );
     playfield.rotation.x = -Math.PI / 2;
     root.add(playfield);
@@ -141,7 +165,7 @@ export function buildTableScene(sim: TableSim): TableScene {
     const ballGeometry = new SphereGeometry(table.ballRadius, 32, 16);
     const ballMeshes: Mesh[] = [];
 
-    root.add(new AmbientLight(0xffffff, 0.6));
+    root.add(new AmbientLight(0xffffff, 0.35));
     const light = new PointLight(0xff3da5, 3, 4);
     light.position.set(0, 1, 0.2);
     root.add(light);
@@ -162,7 +186,7 @@ export function buildTableScene(sim: TableSim): TableScene {
         place(plungerMesh, sim.plunger.config.x, sim.plunger.tipY + 0.01, 0.015);
 
         while (ballMeshes.length < world.balls.length) {
-            const mesh = new Mesh(ballGeometry, chrome);
+            const mesh = new Mesh(ballGeometry, ballMaterial);
             ballMeshes.push(mesh);
             root.add(mesh);
         }

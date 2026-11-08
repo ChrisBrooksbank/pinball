@@ -1,7 +1,9 @@
-import { PerspectiveCamera, Scene, WebGLRenderer } from 'three';
+import { ACESFilmicToneMapping, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
 import { FixedStepper } from '@core/loop';
 import { createDebugPanel } from '@/debug-panel';
 import { TableSim } from '@physics/table-sim';
+import { createChromeEnvironment } from '@render/environment';
+import { createPostProcessing } from '@render/post';
 import { buildTableScene } from '@render/scene';
 import { PLAYFIELD } from '@/table/playfield';
 
@@ -11,7 +13,9 @@ if (!(canvas instanceof HTMLCanvasElement)) {
 }
 
 const renderer = new WebGLRenderer({ canvas, antialias: true });
+renderer.toneMapping = ACESFilmicToneMapping;
 const scene = new Scene();
+scene.environment = createChromeEnvironment(renderer);
 const camera = new PerspectiveCamera(45, 1, 0.05, 20);
 camera.position.set(0, 1.1, 0.95);
 camera.lookAt(0, 0, 0.05);
@@ -21,6 +25,7 @@ const debugPanel = createDebugPanel(sandbox);
 
 const tableScene = buildTableScene(sandbox);
 scene.add(tableScene.root);
+const post = createPostProcessing(renderer, scene, camera);
 
 const KEY_ACTIONS: Record<string, 'left' | 'right' | 'plunger'> = {
     ShiftLeft: 'left',
@@ -45,8 +50,10 @@ window.addEventListener('keyup', e => onKey(false, e));
 
 function resize(): void {
     const { clientWidth: w, clientHeight: h } = canvas as HTMLCanvasElement;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const pixelRatio = Math.min(window.devicePixelRatio, 2);
+    renderer.setPixelRatio(pixelRatio);
     renderer.setSize(w, h, false);
+    post.setSize(w, h, pixelRatio);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
 }
@@ -64,5 +71,5 @@ renderer.setAnimationLoop(now => {
     sandbox.world.events.drain();
     tableScene.sync();
     debugPanel.update();
-    renderer.render(scene, camera);
+    post.render();
 });

@@ -1,7 +1,8 @@
-import { Mesh } from 'three';
+import { Mesh, type MeshStandardMaterial } from 'three';
 import { describe, expect, it } from 'vitest';
 import { TableSim } from '@physics/table-sim';
 import { PLAYFIELD } from '@/table/playfield';
+import { PALETTE } from './palette';
 import { buildTableScene } from './scene';
 
 describe('buildTableScene', () => {
@@ -39,5 +40,20 @@ describe('buildTableScene', () => {
         const materials = new Set(meshes.map(m => m.material));
         expect(geometries.size).toBeLessThan(meshes.length / 2);
         expect(materials.size).toBeLessThan(meshes.length / 4);
+    });
+});
+
+describe('retro look', () => {
+    it('uses a dark playfield and a mirror-like ball material', () => {
+        const sim = new TableSim(PLAYFIELD);
+        const scene = buildTableScene(sim);
+        scene.sync();
+        const meshes = scene.root.children.filter((c): c is Mesh => c instanceof Mesh);
+        const mats = meshes.map(m => m.material as MeshStandardMaterial);
+        const field = mats.find(m => m.color.getHex() === PALETTE.playfield);
+        expect(field).toBeDefined();
+        expect(PALETTE.playfield).toBeLessThan(0x202020);
+        const ball = mats.find(m => m.metalness === 1 && m.roughness < 0.1);
+        expect(ball).toBeDefined();
     });
 });
