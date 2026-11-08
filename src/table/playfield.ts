@@ -1,6 +1,7 @@
 import type { FlipperConfig } from '../physics/flipper';
 import { vec2 } from '../physics/vec2';
 import type {
+    DropTargetBankDef,
     LampDef,
     LaneDef,
     ScriptedPathDef,
@@ -44,6 +45,8 @@ const RIGHT_FLIPPER: FlipperConfig = {
 /** Walls on the left half as [id, x1, y1, x2, y2]; mirrored to build the right half. */
 const SIDE_WALLS: readonly (readonly [string, number, number, number, number])[] = [
     // Outlane/inlane divider and the slope that feeds the flipper.
+    // Lane guide extended upward so the in/outlane channels read as distinct return lanes.
+    ['guide-top', 0.14, 1.3, 0.14, 1.4],
     ['guide', 0.14, 1.4, 0.14, 1.58],
     ['guide-slope', 0.14, 1.58, 0.2, 1.77],
     // Slingshot housing (the kicking face is a separate slingshot element).
@@ -76,6 +79,21 @@ const TARGETS: TargetDef[] = [0, 1, 2].map(i => ({
     b: vec2(0.072, 1.0 + i * 0.12),
     lampId: `lamp-target-${i + 1}`,
 }));
+
+/** Mid-playfield drop-target banks (3 each), mirrored about the centre line. */
+const DROP_BANKS: DropTargetBankDef[] = (['left', 'right'] as const).map(side => {
+    const x = side === 'left' ? 0.2 : mx(0.2);
+    return {
+        id: `dropbank-${side}`,
+        resetDelay: 1,
+        targets: [0, 1, 2].map(i => ({
+            id: `droptarget-${side}-${i + 1}`,
+            a: vec2(x, 1.0 + i * 0.1),
+            b: vec2(x, 1.08 + i * 0.1),
+            lampId: `lamp-droptarget-${side}-${i + 1}`,
+        })),
+    };
+});
 
 const RAW_LANES: Omit<LaneDef, 'lampId'>[] = [
     { id: 'outlane-left', kind: 'outlane', a: vec2(0.02, 1.48), b: vec2(0.14, 1.48) },
@@ -129,6 +147,13 @@ const LAMPS: LampDef[] = [
         pos: vec2(0.14, (t.a.y + t.b.y) / 2),
         color: '#00f0ff',
     })),
+    ...DROP_BANKS.flatMap(bank =>
+        bank.targets.map(t => ({
+            id: t.lampId!,
+            pos: vec2(t.a.x + (t.a.x < MIRROR_X / 2 ? 0.07 : -0.07), (t.a.y + t.b.y) / 2),
+            color: '#39ff14',
+        }))
+    ),
     ...LANES.map(lane => ({
         id: `lamp-${lane.id}`,
         pos: vec2((lane.a.x + lane.b.x) / 2, lane.a.y + 0.06),
@@ -164,6 +189,7 @@ export const PLAYFIELD: TableDef = {
     })),
     slingshots: SLINGSHOTS,
     targets: TARGETS,
+    dropBanks: DROP_BANKS,
     spinners: [{ id: 'spinner-1', a: vec2(0.72, 0.8), b: vec2(0.72, 0.92) }],
     paths: PATHS,
     lanes: LANES,

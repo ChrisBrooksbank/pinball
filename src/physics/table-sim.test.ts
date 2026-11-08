@@ -63,7 +63,11 @@ describe('buildWorld', () => {
     it('creates a collider or element for every physical part of the table', () => {
         const world = buildWorld(PLAYFIELD);
         const { walls, arcs, bumpers, slingshots, targets, spinners, flippers } = PLAYFIELD;
-        expect(world.segments).toHaveLength(walls.length + slingshots.length + targets.length);
+        const dropTargets = (PLAYFIELD.dropBanks ?? []).reduce((n, b) => n + b.targets.length, 0);
+        expect(world.segments).toHaveLength(
+            walls.length + slingshots.length + targets.length + dropTargets
+        );
+        expect(world.dropBanks).toHaveLength(PLAYFIELD.dropBanks?.length ?? 0);
         expect(world.arcs).toHaveLength(arcs.length);
         expect(world.bumpers).toHaveLength(bumpers.length);
         expect(world.spinners).toHaveLength(spinners.length);

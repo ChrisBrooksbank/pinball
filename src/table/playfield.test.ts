@@ -51,3 +51,25 @@ describe('PLAYFIELD', () => {
         }
     });
 });
+
+describe('PLAYFIELD lower playfield', () => {
+    it('has two drop-target banks of three with lamps', () => {
+        const banks = PLAYFIELD.dropBanks ?? [];
+        expect(banks).toHaveLength(2);
+        for (const bank of banks) {
+            expect(bank.targets).toHaveLength(3);
+            for (const t of bank.targets) {
+                expect(PLAYFIELD.lamps.some(l => l.id === t.lampId)).toBe(true);
+            }
+        }
+    });
+
+    it('leaves a ball-wide gap beside each drop bank', () => {
+        const d = PLAYFIELD.ballRadius * 2;
+        for (const bank of PLAYFIELD.dropBanks ?? []) {
+            const x = bank.targets[0]!.a.x;
+            const wallGap = Math.min(x - 0.072, 0.86 - x, x - 0.02);
+            expect(wallGap).toBeGreaterThan(d * 1.5);
+        }
+    });
+});
