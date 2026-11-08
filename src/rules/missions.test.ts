@@ -9,7 +9,7 @@ function playing(): RulesEngine {
     return engine;
 }
 
-const target = (e: RulesEngine) => e.handle({ type: 'targetHit', id: 'target-1', ballId: 0 });
+const bank = (e: RulesEngine) => e.handle({ type: 'dropBankCleared', id: 'dropbank-left' });
 const bumper = (e: RulesEngine) =>
     e.handle({ type: 'bumperHit', id: 'bumper-1', ballId: 0, speed: 1 });
 
@@ -18,19 +18,17 @@ describe('mission 1: bumper rush', () => {
         expect(MISSIONS).toContain(BUMPER_RUSH);
     });
 
-    it('starts after three target hits', () => {
+    it('starts when a drop-target bank is cleared', () => {
         const engine = playing();
-        target(engine);
-        target(engine);
         expect(engine.missionState.activeId).toBeNull();
-        const commands = target(engine);
+        const commands = bank(engine);
         expect(engine.missionState.activeId).toBe('bumper-rush');
         expect(commands).toContainEqual({ type: 'display', text: 'BUMPER RUSH START' });
     });
 
     it('completes after ten bumper hits and awards points', () => {
         const engine = playing();
-        for (let i = 0; i < 3; i++) target(engine);
+        bank(engine);
         const before = engine.score;
         for (let i = 0; i < 10; i++) bumper(engine);
         expect(engine.missionState.isCompleted('bumper-rush')).toBe(true);
@@ -40,7 +38,7 @@ describe('mission 1: bumper rush', () => {
 
     it('fails when the timer expires', () => {
         const engine = playing();
-        for (let i = 0; i < 3; i++) target(engine);
+        bank(engine);
         const commands = engine.handle({ type: 'tick', dt: BUMPER_RUSH.timeLimit + 1 });
         expect(engine.missionState.activeId).toBeNull();
         expect(engine.missionState.isCompleted('bumper-rush')).toBe(false);

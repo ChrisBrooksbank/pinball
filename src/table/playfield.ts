@@ -171,6 +171,9 @@ const PATHS: ScriptedPathDef[] = [
     },
 ];
 
+/** Centre-left kickout saucer: lock and mission hole. */
+const SAUCER_CENTER = vec2(0.3, 0.92);
+
 const BUMPER_POSITIONS = [vec2(0.4, 0.62), vec2(0.62, 0.62), vec2(0.51, 0.8)];
 
 const LAMPS: LampDef[] = [
@@ -191,6 +194,7 @@ const LAMPS: LampDef[] = [
             color: '#39ff14',
         }))
     ),
+    { id: 'lamp-saucer', pos: vec2(SAUCER_CENTER.x, SAUCER_CENTER.y + 0.08), color: '#ff9f1a' },
     ...LANES.map(lane => ({
         id: `lamp-${lane.id}`,
         pos: vec2((lane.a.x + lane.b.x) / 2, lane.a.y + 0.06),
@@ -228,6 +232,7 @@ export const PLAYFIELD: TableDef = {
     slingshots: SLINGSHOTS,
     targets: TARGETS,
     dropBanks: DROP_BANKS,
+    saucers: [{ id: 'saucer-lock', center: SAUCER_CENTER, radius: 0.04, lampId: 'lamp-saucer' }],
     spinners: [{ id: 'spinner-1', a: vec2(0.78, 0.6), b: vec2(0.78, 0.72) }],
     paths: PATHS,
     lanes: LANES,

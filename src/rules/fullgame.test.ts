@@ -31,11 +31,12 @@ class Script {
     }
 }
 
-const target = { type: 'targetHit', id: 'target-1', ballId: 0 } as const;
 const bumper = { type: 'bumperHit', id: 'bumper-1', ballId: 0, speed: 1 } as const;
 const spinner = { type: 'spinnerSpin', id: 'spinner-1', ballId: 0, angularVelocity: 5 } as const;
 const sling = { type: 'slingshot', id: 'sling-left', ballId: 0, speed: 1 } as const;
 const inlane = { type: 'laneEnter', id: 'inlane-left', ballId: 0 } as const;
+const bank = { type: 'dropBankCleared', id: 'dropbank-left' } as const;
+const capture = { type: 'saucerCapture', id: 'saucer-lock', ballId: 0 } as const;
 const orbit = { type: 'pathExit', id: 'orbit-1', ballId: 0 } as const;
 const ramp = { type: 'pathExit', id: 'ramp-1', ballId: 0 } as const;
 const launch = { type: 'ballLaunched', ballId: 0 } as const;
@@ -51,7 +52,7 @@ describe('scripted full game (no browser)', () => {
         game.send({ type: 'startPressed' });
         expect(engine.ballNumber).toBe(1);
         game.send(launch);
-        game.send(target, 3);
+        game.send(bank);
         game.send(bumper, 10);
         game.send(orbit);
         game.send(ramp);
@@ -135,9 +136,11 @@ describe('scripted full game (no browser)', () => {
             const game = new Script();
             game.send({ type: 'startPressed' });
             game.send(launch);
-            game.send(target, 3);
+            game.send(bank);
             game.send(bumper, 10);
-            game.send(orbit, 4);
+            game.send(ramp);
+            game.send(capture);
+            game.tick(2);
             game.send(drain);
             game.tick(3);
             return game.commands;

@@ -239,33 +239,89 @@ describe('combo shots', () => {
     });
 });
 
+describe('drop banks and saucer', () => {
+    const bank = (e: RulesEngine) => e.handle({ type: 'dropBankCleared', id: 'dropbank-right' });
+    const capture = (e: RulesEngine) =>
+        e.handle({ type: 'saucerCapture', id: 'saucer-lock', ballId: 0 });
+
+    it('scores drop targets and a cleared bank advances the bonus multiplier', () => {
+        const engine = playing();
+        const hit = engine.handle({
+            type: 'dropTargetHit',
+            id: 'droptarget-left-1',
+            bankId: 'dropbank-left',
+            ballId: 0,
+        });
+        expect(hit).toContainEqual({ type: 'score', points: 300, total: 300 });
+        const commands = bank(engine);
+        expect(engine.bonusMultiplier).toBe(2);
+        expect(commands).toContainEqual(expect.objectContaining({ type: 'score', points: 2000 }));
+    });
+
+    it('ejects the saucer ball after the hold time', () => {
+        const engine = playing();
+        const commands = capture(engine);
+        expect(commands).toContainEqual(expect.objectContaining({ type: 'score', points: 5000 }));
+        expect(engine.handle({ type: 'tick', dt: 1 }).some(c => c.type === 'kickBall')).toBe(false);
+        expect(engine.handle({ type: 'tick', dt: 1 })).toContainEqual({
+            type: 'kickBall',
+            id: 'saucer-lock',
+            ballId: 0,
+        });
+        expect(engine.handle({ type: 'tick', dt: 5 }).some(c => c.type === 'kickBall')).toBe(false);
+    });
+
+    it('does not count a lock until the ramp lights it', () => {
+        const engine = playing();
+        capture(engine);
+        expect(engine.lockedBalls).toBe(0);
+        engine.handle({ type: 'pathExit', id: 'ramp-centre', ballId: 0 });
+        expect(engine.lockIsLit).toBe(true);
+        const commands = capture(engine);
+        expect(engine.lockedBalls).toBe(1);
+        expect(engine.lockIsLit).toBe(false);
+        expect(commands).toContainEqual({ type: 'display', text: 'BALL 1 LOCKED' });
+    });
+});
+
 describe('multiball', () => {
     const orbit = (e: RulesEngine) => e.handle({ type: 'pathExit', id: 'orbit-left', ballId: 0 });
     const ramp = (e: RulesEngine) => e.handle({ type: 'pathExit', id: 'ramp-centre', ballId: 0 });
     const gap = (e: RulesEngine) => e.handle({ type: 'tick', dt: 5 });
+    const capture = (e: RulesEngine) =>
+        e.handle({ type: 'saucerCapture', id: 'saucer-lock', ballId: 0 });
+
+    function lockOnce(engine: RulesEngine): ReturnType<typeof capture> {
+        ramp(engine);
+        gap(engine);
+        return capture(engine);
+    }
 
     function multiball(): RulesEngine {
         const engine = playing();
-        for (let i = 0; i < 3; i++) {
-            orbit(engine);
-            gap(engine);
-        }
-        orbit(engine);
+        lockOnce(engine);
+        lockOnce(engine);
         return engine;
     }
 
-    it('starts after enough orbit shots and adds balls', () => {
+    it('starts after enough saucer locks and adds balls', () => {
         const engine = playing();
-        for (let i = 0; i < 3; i++) {
-            orbit(engine);
-            gap(engine);
-        }
+        lockOnce(engine);
         expect(engine.multiballActive).toBe(false);
-        const commands = orbit(engine);
+        const commands = lockOnce(engine);
         expect(engine.multiballActive).toBe(true);
         expect(engine.ballsOnTable).toBe(3);
         expect(commands.filter(c => c.type === 'addBall')).toHaveLength(2);
         expect(commands).toContainEqual({ type: 'display', text: 'MULTIBALL' });
+    });
+
+    it('orbits alone do not start multiball', () => {
+        const engine = playing();
+        for (let i = 0; i < 6; i++) {
+            orbit(engine);
+            gap(engine);
+        }
+        expect(engine.multiballActive).toBe(false);
     });
 
     it('ramps pay jackpots and the third lights the super jackpot on the orbit', () => {

@@ -8,11 +8,20 @@ export const SCORING = {
     outlane: 1000,
     orbit: 1500,
     ramp: 3000,
+    dropTarget: 300,
+    /** Awarded when a drop-target bank is cleared (also raises the bonus multiplier). */
+    dropBank: 2000,
+    /** Kickout saucer hit while the lock is not lit. */
+    saucer: 5000,
+    /** Kickout saucer hit while the lock is lit. */
+    lock: 10000,
     /** Bonus accrued per scoring feature, multiplied at the end of the ball. */
     bonusBumper: 50,
     bonusTarget: 250,
     bonusOrbit: 500,
     bonusRamp: 1000,
+    bonusDropTarget: 100,
+    bonusDropBank: 500,
     /** Target hits needed to raise the bonus multiplier by one. */
     targetsPerMultiplier: 3,
     maxMultiplier: 5,
@@ -24,8 +33,10 @@ export const SCORING = {
     comboStep: 1000,
     /** Highest combo level that increases the payout. */
     maxCombo: 6,
-    /** Orbit shots (outside multiball) needed to start multiball. */
-    orbitsForMultiball: 4,
+    /** Ball locks in the saucer (lit by the ramp) needed to start multiball. */
+    locksForMultiball: 2,
+    /** Seconds the saucer holds a ball before the rules eject it. */
+    saucerHoldSeconds: 1.5,
     /** Balls in play when multiball starts. */
     multiballBalls: 3,
     /** Ramp-shot jackpot during multiball. */

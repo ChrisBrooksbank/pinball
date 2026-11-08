@@ -20,7 +20,12 @@ const SHOT_EVENTS: ReadonlySet<string> = new Set([
     'slingshot',
     'laneEnter',
     'pathExit',
+    'dropBankCleared',
+    'saucerCapture',
 ]);
+
+/** Lamp that shows the saucer lock is lit. */
+const LOCK_LAMP = 'lamp-saucer';
 
 type GamePhase = 'attract' | 'plunger' | 'play' | 'bonus' | 'gameOver';
 
@@ -41,7 +46,9 @@ export class RulesEngine {
     private tilted = false;
     private ballsInPlay = 1;
     private multiball = false;
-    private orbitShots = 0;
+    private locks = 0;
+    private lockLit = false;
+    private ejects: { id: string; ballId: number; timer: number }[] = [];
     private jackpots = 0;
     private superLit = false;
     private wizardTime = 0;
@@ -80,6 +87,16 @@ export class RulesEngine {
     /** Balls currently on the playfield (more than one only during multiball). */
     get ballsOnTable(): number {
         return this.ballsInPlay;
+    }
+
+    /** True when the ramp has lit the saucer lock. */
+    get lockIsLit(): boolean {
+        return this.lockLit;
+    }
+
+    /** Balls locked toward multiball so far this ball. */
+    get lockedBalls(): number {
+        return this.locks;
     }
 
     /** True when the next orbit exit collects the super jackpot. */
@@ -179,6 +196,15 @@ export class RulesEngine {
                     commands.push({ type: 'display', text: `BONUS X${this.multiplier}` });
                 }
                 break;
+            case 'dropTargetHit':
+                this.scorePlay(SCORING.dropTarget, SCORING.bonusDropTarget, 'target', commands);
+                break;
+            case 'dropBankCleared':
+                this.dropBankCleared(commands);
+                break;
+            case 'saucerCapture':
+                this.saucerCapture(event.id, event.ballId, commands);
+                break;
             case 'spinnerSpin':
                 this.scorePlay(SCORING.spinner, 0, 'spinner', commands);
                 break;
@@ -236,6 +262,33 @@ export class RulesEngine {
         out.push({ type: 'sound', name: sound });
     }
 
+    /** Clearing a bank pays and advances the bonus multiplier. */
+    private dropBankCleared(out: RulesCommand[]): void {
+        if (this.currentPhase !== 'play' || this.tilted) return;
+        this.scorePlay(SCORING.dropBank, SCORING.bonusDropBank, 'dropBank', out);
+        this.multiplier = Math.min(SCORING.maxMultiplier, this.multiplier + 1);
+        out.push({ type: 'display', text: `BONUS X${this.multiplier}` });
+    }
+
+    /** The saucer always ejects after a hold; a lit lock counts toward multiball. */
+    private saucerCapture(id: string, ballId: number, out: RulesCommand[]): void {
+        this.ejects.push({ id, ballId, timer: SCORING.saucerHoldSeconds });
+        if (this.currentPhase !== 'play' || this.tilted) return;
+        if (!this.lockLit || this.multiball) {
+            this.scorePlay(SCORING.saucer, 0, 'saucer', out);
+            return;
+        }
+        this.scorePlay(SCORING.lock, 0, 'lock', out);
+        this.lockLit = false;
+        out.push({ type: 'lamp', id: LOCK_LAMP, mode: 'off' });
+        this.locks += 1;
+        if (this.locks >= SCORING.locksForMultiball) {
+            this.startMultiball(out);
+        } else {
+            out.push({ type: 'display', text: `BALL ${this.locks} LOCKED` });
+        }
+    }
+
     private pathShot(id: string, out: RulesCommand[]): void {
         const value = pathValue(id);
         if (!value) return;
@@ -252,12 +305,13 @@ export class RulesEngine {
         }
     }
 
-    /** Orbits build to multiball; during multiball ramps pay jackpots and the orbit pays a lit super jackpot. */
+    /** Outside multiball the ramp lights the saucer lock; during multiball ramps pay jackpots and the orbit pays a lit super jackpot. */
     private multiballShot(kind: 'orbit' | 'ramp', out: RulesCommand[]): void {
         if (!this.multiball) {
-            if (kind !== 'orbit') return;
-            this.orbitShots += 1;
-            if (this.orbitShots >= SCORING.orbitsForMultiball) this.startMultiball(out);
+            if (kind !== 'ramp' || this.lockLit) return;
+            this.lockLit = true;
+            out.push({ type: 'lamp', id: LOCK_LAMP, mode: 'flash' });
+            out.push({ type: 'display', text: 'LOCK IS LIT' });
             return;
         }
         if (kind === 'ramp') {
@@ -279,7 +333,9 @@ export class RulesEngine {
 
     private startMultiball(out: RulesCommand[]): void {
         this.multiball = true;
-        this.orbitShots = 0;
+        this.locks = 0;
+        this.lockLit = false;
+        out.push({ type: 'lamp', id: LOCK_LAMP, mode: 'off' });
         this.jackpots = 0;
         this.superLit = false;
         this.saveTimer = 0;
@@ -334,7 +390,10 @@ export class RulesEngine {
         this.comboCount = 0;
         this.ballsInPlay = 1;
         this.multiball = false;
-        this.orbitShots = 0;
+        this.locks = 0;
+        this.lockLit = false;
+        this.ejects = [];
+        out.push({ type: 'lamp', id: LOCK_LAMP, mode: 'off' });
         this.jackpots = 0;
         this.superLit = false;
         this.currentPhase = 'plunger';
@@ -352,6 +411,12 @@ export class RulesEngine {
     }
 
     private advanceTimer(dt: number, out: RulesCommand[]): void {
+        for (const eject of this.ejects) {
+            eject.timer -= dt;
+            if (eject.timer <= 0)
+                out.push({ type: 'kickBall', id: eject.id, ballId: eject.ballId });
+        }
+        this.ejects = this.ejects.filter(e => e.timer > 0);
         if (this.currentPhase === 'play' && this.saveTimer > 0) {
             this.saveTimer = Math.max(0, this.saveTimer - dt);
         }

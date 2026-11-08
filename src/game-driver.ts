@@ -6,6 +6,9 @@ import type { RulesCommand, RulesEvent } from '@rules/types';
 
 /** Distance a ball must travel from its plunger start before it counts as launched (metres). */
 const LAUNCH_DISTANCE = 0.05;
+/** Saucer eject direction (straight up the table) and speed (m/s). */
+const SAUCER_EJECT_ANGLE = -Math.PI / 2;
+const SAUCER_EJECT_SPEED = 2.5;
 
 /**
  * Glue between the physics sim and the rules engine. Physics events go in, rules commands come out
@@ -74,6 +77,9 @@ export class GameDriver {
             case 'addBall':
                 // The rules own the ball count; top the table up to it.
                 if (this.sim.world.balls.length < this.rules.ballsOnTable) this.sim.serve();
+                break;
+            case 'kickBall':
+                this.sim.world.ejectSaucer(command.id, SAUCER_EJECT_ANGLE, SAUCER_EJECT_SPEED);
                 break;
             default:
                 break;
