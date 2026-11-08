@@ -238,3 +238,62 @@ describe('combo shots', () => {
         expect(engine.combo).toBe(0);
     });
 });
+
+describe('multiball', () => {
+    const orbit = (e: RulesEngine) => e.handle({ type: 'pathExit', id: 'orbit-left', ballId: 0 });
+    const ramp = (e: RulesEngine) => e.handle({ type: 'pathExit', id: 'ramp-centre', ballId: 0 });
+    const gap = (e: RulesEngine) => e.handle({ type: 'tick', dt: 5 });
+
+    function multiball(): RulesEngine {
+        const engine = playing();
+        for (let i = 0; i < 3; i++) {
+            orbit(engine);
+            gap(engine);
+        }
+        orbit(engine);
+        return engine;
+    }
+
+    it('starts after enough orbit shots and adds balls', () => {
+        const engine = playing();
+        for (let i = 0; i < 3; i++) {
+            orbit(engine);
+            gap(engine);
+        }
+        expect(engine.multiballActive).toBe(false);
+        const commands = orbit(engine);
+        expect(engine.multiballActive).toBe(true);
+        expect(engine.ballsOnTable).toBe(3);
+        expect(commands.filter(c => c.type === 'addBall')).toHaveLength(2);
+        expect(commands).toContainEqual({ type: 'display', text: 'MULTIBALL' });
+    });
+
+    it('ramps pay jackpots and the third lights the super jackpot on the orbit', () => {
+        const engine = multiball();
+        for (let i = 0; i < 3; i++) {
+            const commands = ramp(engine);
+            expect(commands).toContainEqual({ type: 'display', text: 'JACKPOT' });
+            expect(commands).toContainEqual(
+                expect.objectContaining({ type: 'score', points: 20000 })
+            );
+            gap(engine);
+        }
+        expect(engine.superJackpotLit).toBe(true);
+        const commands = orbit(engine);
+        expect(commands).toContainEqual(expect.objectContaining({ type: 'score', points: 100000 }));
+        expect(engine.superJackpotLit).toBe(false);
+    });
+
+    it('ends when one ball remains, without ending the ball', () => {
+        const engine = multiball();
+        engine.handle({ type: 'drain', ballId: 1 });
+        expect(engine.multiballActive).toBe(true);
+        const commands = engine.handle({ type: 'drain', ballId: 2 });
+        expect(engine.multiballActive).toBe(false);
+        expect(commands).toContainEqual({ type: 'display', text: 'MULTIBALL OVER' });
+        expect(engine.phase).toBe('play');
+        expect(ramp(engine).some(c => c.type === 'display' && c.text === 'JACKPOT')).toBe(false);
+        engine.handle({ type: 'drain', ballId: 0 });
+        expect(engine.phase).toBe('bonus');
+    });
+});

@@ -78,7 +78,7 @@ Every spec requirement is unimplemented.
 - [x] Mission 2 (add to `src/rules/missions.ts`), with unit test (spec: game-rules.md)
 - [x] Mission 3 (add to `src/rules/missions.ts`), with unit test (spec: game-rules.md)
 - [x] Combo shots for chained orbit/ramp hits (spec: game-rules.md)
-- [ ] Multiball (2-3 balls) start/end, jackpot, super-jackpot; tests (spec: game-rules.md)
+- [x] Multiball (2-3 balls) start/end, jackpot, super-jackpot; tests (spec: game-rules.md)
 - [ ] Wizard mode unlocked by completing all missions; test (spec: game-rules.md)
 - [ ] Scripted full-game test with no browser (spec: game-rules.md)
 - [ ] Wire rules into main: physics events in, commands out to lamps/physics (spec: game-rules.md)

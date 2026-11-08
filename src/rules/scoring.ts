@@ -24,6 +24,15 @@ export const SCORING = {
     comboStep: 1000,
     /** Highest combo level that increases the payout. */
     maxCombo: 6,
+    /** Orbit shots (outside multiball) needed to start multiball. */
+    orbitsForMultiball: 4,
+    /** Balls in play when multiball starts. */
+    multiballBalls: 3,
+    /** Ramp-shot jackpot during multiball. */
+    jackpot: 20000,
+    /** Jackpots collected before the super jackpot is lit on the orbit. */
+    jackpotsForSuper: 3,
+    superJackpot: 100000,
 } as const;
 
 /** Points and bonus for a path exit, or null if the path is not a scoring shot. */

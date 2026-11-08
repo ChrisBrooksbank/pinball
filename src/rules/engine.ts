@@ -39,6 +39,11 @@ export class RulesEngine {
     private comboTimer = 0;
     private comboCount = 0;
     private tilted = false;
+    private ballsInPlay = 1;
+    private multiball = false;
+    private orbitShots = 0;
+    private jackpots = 0;
+    private superLit = false;
     private readonly modes: ModeManager;
 
     constructor(missions: readonly MissionDef[] = MISSIONS) {
@@ -63,6 +68,21 @@ export class RulesEngine {
     /** Current combo chain length (orbit/ramp shots within the combo window); 0 when none. */
     get combo(): number {
         return this.comboCount;
+    }
+
+    /** True while multiball is running. */
+    get multiballActive(): boolean {
+        return this.multiball;
+    }
+
+    /** Balls currently on the playfield (more than one only during multiball). */
+    get ballsOnTable(): number {
+        return this.ballsInPlay;
+    }
+
+    /** True when the next orbit exit collects the super jackpot. */
+    get superJackpotLit(): boolean {
+        return this.superLit;
     }
 
     get score(): number {
@@ -109,6 +129,11 @@ export class RulesEngine {
                 break;
             case 'drain':
                 if (this.currentPhase !== 'play') break;
+                if (this.ballsInPlay > 1) {
+                    this.ballsInPlay -= 1;
+                    if (this.ballsInPlay === 1) this.endMultiball(commands);
+                    break;
+                }
                 if (this.saveTimer > 0 && !this.tilted) {
                     this.saveTimer = 0;
                     this.currentPhase = 'plunger';
@@ -184,6 +209,7 @@ export class RulesEngine {
         this.scorePlay(value.points, value.bonus, value.kind, out);
         if (this.currentPhase !== 'play' || this.tilted) return;
         this.comboShot(out);
+        this.multiballShot(value.kind, out);
         if (value.kind !== 'ramp') return;
         this.rampShots += 1;
         if (this.rampShots % SCORING.rampsForExtraBall === 0) {
@@ -191,6 +217,51 @@ export class RulesEngine {
             out.push({ type: 'display', text: 'EXTRA BALL' });
             out.push({ type: 'sound', name: 'extraBall' });
         }
+    }
+
+    /** Orbits build to multiball; during multiball ramps pay jackpots and the orbit pays a lit super jackpot. */
+    private multiballShot(kind: 'orbit' | 'ramp', out: RulesCommand[]): void {
+        if (!this.multiball) {
+            if (kind !== 'orbit') return;
+            this.orbitShots += 1;
+            if (this.orbitShots >= SCORING.orbitsForMultiball) this.startMultiball(out);
+            return;
+        }
+        if (kind === 'ramp') {
+            this.award(SCORING.jackpot, out);
+            this.jackpots += 1;
+            out.push({ type: 'display', text: 'JACKPOT' });
+            out.push({ type: 'sound', name: 'jackpot' });
+            if (this.jackpots % SCORING.jackpotsForSuper === 0 && !this.superLit) {
+                this.superLit = true;
+                out.push({ type: 'display', text: 'SUPER JACKPOT LIT' });
+            }
+        } else if (this.superLit) {
+            this.superLit = false;
+            this.award(SCORING.superJackpot, out);
+            out.push({ type: 'display', text: 'SUPER JACKPOT' });
+            out.push({ type: 'sound', name: 'superJackpot' });
+        }
+    }
+
+    private startMultiball(out: RulesCommand[]): void {
+        this.multiball = true;
+        this.orbitShots = 0;
+        this.jackpots = 0;
+        this.superLit = false;
+        this.saveTimer = 0;
+        const extra = SCORING.multiballBalls - this.ballsInPlay;
+        for (let i = 0; i < extra; i++) out.push({ type: 'addBall' });
+        this.ballsInPlay = SCORING.multiballBalls;
+        out.push({ type: 'display', text: 'MULTIBALL' });
+        out.push({ type: 'sound', name: 'multiball' });
+    }
+
+    private endMultiball(out: RulesCommand[]): void {
+        this.multiball = false;
+        this.superLit = false;
+        this.jackpots = 0;
+        out.push({ type: 'display', text: 'MULTIBALL OVER' });
     }
 
     /** Chain orbit/ramp exits: each one inside the window raises the combo and pays a growing bonus. */
@@ -226,6 +297,11 @@ export class RulesEngine {
         this.saveTimer = 0;
         this.comboTimer = 0;
         this.comboCount = 0;
+        this.ballsInPlay = 1;
+        this.multiball = false;
+        this.orbitShots = 0;
+        this.jackpots = 0;
+        this.superLit = false;
         this.currentPhase = 'plunger';
         out.push({ type: 'addBall' });
         out.push({ type: 'display', text: `BALL ${this.ball}` });
