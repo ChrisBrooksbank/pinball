@@ -1,0 +1,28 @@
+name: Update Linux snapshots
+
+# Manual: regenerates Playwright visual baselines on Linux (the platform CI uses)
+# and uploads them as an artifact. Download, copy into e2e/visual.spec.ts-snapshots/, commit.
+on:
+    workflow_dispatch:
+
+jobs:
+    snapshots:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - run: npm ci
+            - run: npx playwright install --with-deps chromium
+            - run: npx playwright test e2e/visual.spec.ts --update-snapshots
+
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: linux-snapshots
+                  path: e2e/visual.spec.ts-snapshots/*-linux.png
+                  retention-days: 14
