@@ -105,3 +105,60 @@ describe('RulesEngine', () => {
         expect(commands).toHaveLength(4);
     });
 });
+
+describe('scoring', () => {
+    it('scores targets, spinner, slingshot and lanes', () => {
+        const engine = playing();
+        engine.handle({ type: 'targetHit', id: 't', ballId: 0 });
+        engine.handle({ type: 'spinnerSpin', id: 's', ballId: 0, angularVelocity: 5 });
+        engine.handle({ type: 'slingshot', id: 'sl', ballId: 0, speed: 1 });
+        engine.handle({ type: 'laneEnter', id: 'inlane-left', ballId: 0 });
+        engine.handle({ type: 'laneEnter', id: 'outlane-left', ballId: 0 });
+        expect(engine.score).toBe(500 + 25 + 10 + 250 + 1000);
+    });
+
+    it('scores orbit and ramp path exits, ignoring unknown paths', () => {
+        const engine = playing();
+        engine.handle({ type: 'pathExit', id: 'orbit-left', ballId: 0 });
+        engine.handle({ type: 'pathExit', id: 'ramp-centre', ballId: 0 });
+        engine.handle({ type: 'pathExit', id: 'mystery', ballId: 0 });
+        expect(engine.score).toBe(1500 + 3000);
+    });
+
+    it('raises the bonus multiplier every three targets and applies it at ball end', () => {
+        const engine = playing();
+        for (let i = 0; i < 3; i++) engine.handle({ type: 'targetHit', id: 't', ballId: 0 });
+        expect(engine.bonusMultiplier).toBe(2);
+        const before = engine.score;
+        engine.handle({ type: 'drain', ballId: 0 });
+        const commands = engine.handle({ type: 'tick', dt: 3 });
+        expect(commands).toContainEqual({ type: 'score', points: 1500, total: before + 1500 });
+        expect(engine.bonusMultiplier).toBe(1);
+    });
+
+    it('caps the multiplier', () => {
+        const engine = playing();
+        for (let i = 0; i < 30; i++) engine.handle({ type: 'targetHit', id: 't', ballId: 0 });
+        expect(engine.bonusMultiplier).toBe(5);
+    });
+
+    it('awards an extra ball after three ramp shots, replaying the same ball number', () => {
+        const engine = playing();
+        for (let i = 0; i < 3; i++)
+            engine.handle({ type: 'pathExit', id: 'ramp-centre', ballId: 0 });
+        expect(engine.extraBallsPending).toBe(1);
+        engine.handle({ type: 'drain', ballId: 0 });
+        const commands = engine.handle({ type: 'tick', dt: 3 });
+        expect(commands).toContainEqual({ type: 'addBall' });
+        expect(engine.ballNumber).toBe(1);
+        expect(engine.extraBallsPending).toBe(0);
+        expect(engine.phase).toBe('plunger');
+    });
+
+    it('does not score outside active play', () => {
+        const engine = new RulesEngine();
+        engine.handle({ type: 'startPressed' });
+        engine.handle({ type: 'targetHit', id: 't', ballId: 0 });
+        expect(engine.score).toBe(0);
+    });
+});
