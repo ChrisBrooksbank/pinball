@@ -42,7 +42,7 @@ Every spec requirement is unimplemented.
 - [x] Friction and rolling damping applied on contact/surface; sub-stepping/TOI loop for multiple contacts per step (spec: physics-feel.md)
 - [x] Determinism test: two `World` runs with identical input sequences give identical positions (spec: physics-feel.md)
 - [x] Flipper as rotating capsule: rest/up angles, swing-up speed, hold, angular velocity tracked per step (spec: physics-feel.md)
-- [ ] Flipper collision response using contact-point velocity from angular velocity; test resting ball flicked faster when flipper swings (spec: physics-feel.md)
+- [x] Flipper collision response using contact-point velocity from angular velocity; test resting ball flicked faster when flipper swings (spec: physics-feel.md)
 - [ ] Flipper behaviours: cradle/trap (hold ball while raised, no jitter) and flick-pass (flipper-end release); tests for each (spec: physics-feel.md)
 - [ ] Plunger: variable pull strength, release impulse onto ball in lane (spec: physics-feel.md)
 - [ ] Pop bumpers (radial kick + event), slingshots (kick along normal + event), standup targets, spinner (angular velocity + spin events) as collision elements (spec: physics-feel.md) — split into 2 iterations if large

@@ -1,4 +1,5 @@
-import { add, vec2, type Vec2 } from './vec2';
+import type { Segment } from './collision';
+import { add, scale, vec2, type Vec2 } from './vec2';
 
 export interface FlipperConfig {
     /** Pivot position in table space. */
@@ -52,6 +53,55 @@ export class Flipper {
     get tip(): Vec2 {
         const { pivot, length } = this.config;
         return add(pivot, vec2(Math.cos(this.angle) * length, Math.sin(this.angle) * length));
+    }
+
+    /**
+     * Collision outline at the current angle: the two external tangent lines of the tapered
+     * capsule, plus the end circles.
+     */
+    get outline(): { sides: Segment[]; circles: { center: Vec2; radius: number }[] } {
+        const { pivot, length: len, baseRadius, tipRadius } = this.config;
+        const tip = this.tip;
+        const axis = vec2(Math.cos(this.angle), Math.sin(this.angle));
+        const normal = vec2(-axis.y, axis.x);
+        const sinPhi = (baseRadius - tipRadius) / len;
+        const cosPhi = Math.sqrt(1 - sinPhi * sinPhi);
+        const sides = [1, -1].map(side => {
+            const u = vec2(
+                side * cosPhi * normal.x + sinPhi * axis.x,
+                side * cosPhi * normal.y + sinPhi * axis.y
+            );
+            return {
+                a: add(pivot, scale(u, baseRadius)),
+                b: add(tip, scale(u, tipRadius)),
+            };
+        });
+        return {
+            sides,
+            circles: [
+                { center: pivot, radius: baseRadius },
+                { center: tip, radius: tipRadius },
+            ],
+        };
+    }
+
+    /** Closest point on the capsule axis to `p`, with the capsule radius there. */
+    closestOnAxis(p: Vec2): { point: Vec2; radius: number } {
+        const { pivot, length: len, baseRadius, tipRadius } = this.config;
+        const ax = Math.cos(this.angle);
+        const ay = Math.sin(this.angle);
+        const s = Math.min(1, Math.max(0, ((p.x - pivot.x) * ax + (p.y - pivot.y) * ay) / len));
+        return {
+            point: vec2(pivot.x + ax * len * s, pivot.y + ay * len * s),
+            radius: baseRadius + (tipRadius - baseRadius) * s,
+        };
+    }
+
+    /** Velocity of the flipper surface at `point` (table space) from its angular velocity. */
+    surfaceVelocity(point: Vec2): Vec2 {
+        const rx = point.x - this.config.pivot.x;
+        const ry = point.y - this.config.pivot.y;
+        return vec2(-ry * this.angularVelocity, rx * this.angularVelocity);
     }
 
     step(dt: number): void {

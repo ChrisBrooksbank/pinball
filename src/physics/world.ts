@@ -121,6 +121,7 @@ export class World {
         for (const flipper of this.flippers) flipper.step(dt);
         for (const ball of this.balls) {
             ball.vel = add(ball.vel, scale(g, dt));
+            this.resolveFlipperPenetration(ball, dt);
             this.moveBall(ball, dt);
         }
     }
@@ -145,19 +146,71 @@ export class World {
                     bestSurface = arc.surface;
                 }
             }
+            let hitFlipper: Flipper | null = null;
+            for (const flipper of this.flippers) {
+                const { sides, circles } = flipper.outline;
+                const candidates: { hit: SweepHit | null }[] = [
+                    ...sides.map(s => ({ hit: sweepCircleSegment(ball.pos, d, ball.radius, s) })),
+                    ...circles.map(c => ({
+                        hit: sweepCircleSegment(ball.pos, d, ball.radius + c.radius, {
+                            a: c.center,
+                            b: c.center,
+                        }),
+                    })),
+                ];
+                for (const { hit } of candidates) {
+                    if (hit && (!best || hit.t < best.t)) {
+                        best = hit;
+                        bestSurface = 'flipper';
+                        hitFlipper = flipper;
+                    }
+                }
+            }
             if (!best) {
                 ball.pos = add(ball.pos, d);
                 return;
             }
             // Stop at the contact point, nudged off the surface to avoid re-detecting it.
             ball.pos = add(add(ball.pos, scale(d, best.t)), scale(best.normal, CONTACT_SKIN));
-            const vn = ball.vel.x * best.normal.x + ball.vel.y * best.normal.y;
-            if (vn < 0) {
-                const mat = this.materials[bestSurface];
-                ball.vel = add(ball.vel, scale(best.normal, -(1 + mat.restitution) * vn));
-                ball.vel = applyContactLoss(ball.vel, best.normal, vn, mat, dt);
-            }
+            this.resolveContact(ball, best.normal, bestSurface, dt, hitFlipper);
             remaining *= 1 - best.t;
         }
+    }
+
+    /** Push balls out of flippers that swung into them, then apply the flipper's surface velocity. */
+    private resolveFlipperPenetration(ball: Ball, dt: number): void {
+        for (const flipper of this.flippers) {
+            const { point, radius } = flipper.closestOnAxis(ball.pos);
+            const dx = ball.pos.x - point.x;
+            const dy = ball.pos.y - point.y;
+            const dist = Math.hypot(dx, dy);
+            const minDist = ball.radius + radius;
+            if (dist >= minDist) continue;
+            const normal = dist > 0 ? vec2(dx / dist, dy / dist) : vec2(0, -1);
+            ball.pos = add(point, scale(normal, minDist + CONTACT_SKIN));
+            this.resolveContact(ball, normal, 'flipper', dt, flipper);
+        }
+    }
+
+    /**
+     * Bounce off a surface. A moving flipper contributes the surface velocity at the contact
+     * point, so the response works on the ball's velocity relative to that surface.
+     */
+    private resolveContact(
+        ball: Ball,
+        normal: Vec2,
+        surface: SurfaceType,
+        dt: number,
+        flipper: Flipper | null
+    ): void {
+        const mat = this.materials[surface];
+        const contact = add(ball.pos, scale(normal, -ball.radius));
+        const surfaceVel = flipper ? flipper.surfaceVelocity(contact) : vec2();
+        const rel = vec2(ball.vel.x - surfaceVel.x, ball.vel.y - surfaceVel.y);
+        const vn = rel.x * normal.x + rel.y * normal.y;
+        if (vn >= 0) return;
+        const bounced = add(rel, scale(normal, -(1 + mat.restitution) * vn));
+        const lossy = applyContactLoss(bounced, normal, vn, mat, dt);
+        ball.vel = add(lossy, surfaceVel);
     }
 }

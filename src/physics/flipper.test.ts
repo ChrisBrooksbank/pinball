@@ -16,6 +16,45 @@ const config: FlipperConfig = {
 
 const DT = 0.001;
 
+/** Ball resting on top of the flipper at its mid-point, plus the world holding both. */
+function ballOnFlipper(): { world: World; flipper: Flipper; ball: ReturnType<World['addBall']> } {
+    const world = new World();
+    const flipper = world.addFlipper(config);
+    const { point, radius } = flipper.closestOnAxis(
+        vec2(config.pivot.x + 0.035, config.pivot.y + 0.02)
+    );
+    const up = vec2(Math.sin(config.restAngle), -Math.cos(config.restAngle));
+    const ball = world.addBall(
+        vec2(point.x + up.x * (radius + 0.027 + 1e-6), point.y + up.y * (radius + 0.027 + 1e-6))
+    );
+    return { world, flipper, ball };
+}
+
+describe('Flipper collision', () => {
+    it('supports a resting ball without letting it fall through', () => {
+        const { world, ball } = ballOnFlipper();
+        const startY = ball.pos.y;
+        for (let i = 0; i < 300; i++) world.step(DT);
+        expect(ball.pos.y).toBeLessThan(startY + 0.03);
+        expect(ball.pos.x).toBeLessThan(config.pivot.x + 0.1);
+    });
+
+    it('flicks a resting ball faster when the flipper swings', () => {
+        const still = ballOnFlipper();
+        const swung = ballOnFlipper();
+        swung.flipper.setHeld(true);
+        for (let i = 0; i < 60; i++) {
+            still.world.step(DT);
+            swung.world.step(DT);
+        }
+        const speed = (b: { vel: { x: number; y: number } }): number =>
+            Math.hypot(b.vel.x, b.vel.y);
+        expect(speed(swung.ball)).toBeGreaterThan(speed(still.ball) + 0.5);
+        // The flick sends the ball up-table (toward -y).
+        expect(swung.ball.vel.y).toBeLessThan(-0.5);
+    });
+});
+
 describe('Flipper', () => {
     it('starts at rest with no angular velocity', () => {
         const f = new Flipper(config);
@@ -57,6 +96,16 @@ describe('Flipper', () => {
         const f = new Flipper({ ...config, restAngle: 0 });
         expect(f.tip.x).toBeCloseTo(0.17, 9);
         expect(f.tip.y).toBeCloseTo(0.5, 9);
+    });
+
+    it('reports surface velocity at a point from angular velocity', () => {
+        const f = new Flipper({ ...config, restAngle: 0 });
+        f.setHeld(true);
+        f.step(DT);
+        // Tip is 0.07 m from the pivot along +x; rotating toward -y at 40 rad/s.
+        const v = f.surfaceVelocity(vec2(0.17, 0.5));
+        expect(v.x).toBeCloseTo(0, 6);
+        expect(v.y).toBeCloseTo(-40 * 0.07, 6);
     });
 
     it('is stepped by the world', () => {
