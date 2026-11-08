@@ -105,7 +105,10 @@ diameters, outlane/inlane gap ~1.5 balls, lane guides 2-3 balls wide).
 - [x] Playfield artwork: procedural/canvas texture generated in code (no binary assets): themed illustration zones, inserts/arrows/lane graphics, rubber and plastic ramps; lamp inserts aligned to artwork (spec: table-layout.md)
 - [x] 3D dressing: raised posts, plastic guides, ramp meshes with chrome rails, apron and lane-guide art, cabinet/side rails, backglass artwork for the new theme (spec: table-layout.md)
 - [x] Camera and mobile framing for the taller table (portrait fills screen, landscape scrolls/zooms vertically with ball follow), perf recheck of draw calls and bloom; 3D dressing raised the mesh count to ~114 (budget test now 130): merge static dressing/wall bars by material to bring it back down (spec: table-layout.md)
-- [ ] Refresh Playwright visual snapshots and tuning-panel defaults for the new table; playtest notes in the plan (spec: table-layout.md)
+- [x] Refresh Playwright visual snapshots and tuning-panel defaults for the new table; playtest notes in the plan (spec: table-layout.md)
+    - Playtest notes: win32 baselines regenerated (chromium + mobile-chrome); Linux baselines still must come from CI.
+      Tuning defaults (flipper ~55 rad/s, restitution/friction scale 1, tilt 6.5°) sit mid-range on the sliders; a test now
+      guards this. No hands-on playtest was possible in this headless loop, so feel on the full-size table is unverified by a human.
 
 ### Phase 4: presentation
 

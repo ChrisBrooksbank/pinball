@@ -41,4 +41,13 @@ describe('tuning params', () => {
         expect(sandbox.world.config.tiltDegrees).toBe(10);
         expect(sandbox.world.gravityAlongTable.y).toBeGreaterThan(before);
     });
+
+    it('keeps every default inside the middle of its slider range for the current table', () => {
+        const { sandbox } = setup();
+        for (const p of createTuningParams(sandbox)) {
+            const frac = (p.get() - p.min) / (p.max - p.min);
+            expect(frac, p.id).toBeGreaterThan(0.1);
+            expect(frac, p.id).toBeLessThan(0.9);
+        }
+    });
 });
