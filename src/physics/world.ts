@@ -1,3 +1,4 @@
+import { EventQueue } from './event-queue';
 import { add, scale, vec2, type Vec2 } from './vec2';
 
 /** Standard gravity in m/s^2. */
@@ -20,6 +21,7 @@ const DEFAULT_WORLD_CONFIG: WorldConfig = { tiltDegrees: 6.5 };
 export class World {
     readonly balls: Ball[] = [];
     readonly config: WorldConfig;
+    readonly events = new EventQueue();
 
     constructor(config: Partial<WorldConfig> = {}) {
         this.config = { ...DEFAULT_WORLD_CONFIG, ...config };
