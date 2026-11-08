@@ -65,7 +65,7 @@ Every spec requirement is unimplemented.
 - [x] Backglass mesh (placeholder texture until DMD exists) (spec: table-layout.md)
 - [x] Responsive fixed camera: portrait mobile vs landscape desktop framing (spec: table-layout.md)
 - [x] Performance pass: pixel ratio cap, bloom cost on mobile, draw-call check (spec: table-layout.md)
-- [ ] Update Playwright visual snapshots for mobile and desktop; note Linux baselines must come from CI (spec: table-layout.md)
+- [x] Update Playwright visual snapshots for mobile and desktop; note Linux baselines must come from CI (spec: table-layout.md)
 
 ### Phase 3: game-rules
 
