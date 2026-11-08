@@ -73,7 +73,7 @@ Every spec requirement is unimplemented.
 - [x] Game flow state machine: attract, start, plunger lane, play, drain, bonus count, next ball / game over (3 balls); test (spec: game-rules.md)
 - [x] Scoring: bumper/target/spinner/ramp/orbit values, bonus multiplier, extra ball; tests (spec: game-rules.md)
 - [x] Ball save (timed after launch) and tilt handling (ball lost, bonus forfeited); tests (spec: game-rules.md)
-- [ ] Mode system framework: missions started by shot sequences, timers, progress persisted across balls (spec: game-rules.md)
+- [x] Mode system framework: missions started by shot sequences, timers, progress persisted across balls (spec: game-rules.md)
 - [ ] Mission 1, 2, 3 (one iteration each), each with unit test (spec: game-rules.md)
 - [ ] Combo shots for chained orbit/ramp hits (spec: game-rules.md)
 - [ ] Multiball (2-3 balls) start/end, jackpot, super-jackpot; tests (spec: game-rules.md)

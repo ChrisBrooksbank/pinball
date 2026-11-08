@@ -1,3 +1,5 @@
+import { MISSIONS } from './missions';
+import { ModeManager, type MissionDef } from './modes';
 import { pathValue, SCORING } from './scoring';
 import type { RulesCommand, RulesEvent } from './types';
 
@@ -9,6 +11,15 @@ const BONUS_COUNT_SECONDS = 2;
 const GAME_OVER_SECONDS = 3;
 /** Seconds after launch during which a drained ball is returned to the plunger lane. */
 const BALL_SAVE_SECONDS = 10;
+
+/** Physics events that count as shots for missions. */
+const SHOT_EVENTS: ReadonlySet<string> = new Set([
+    'bumperHit',
+    'targetHit',
+    'spinnerSpin',
+    'laneEnter',
+    'pathExit',
+]);
 
 type GamePhase = 'attract' | 'plunger' | 'play' | 'bonus' | 'gameOver';
 
@@ -25,6 +36,16 @@ export class RulesEngine {
     private extraBalls = 0;
     private saveTimer = 0;
     private tilted = false;
+    private readonly modes: ModeManager;
+
+    constructor(missions: readonly MissionDef[] = MISSIONS) {
+        this.modes = new ModeManager(missions);
+    }
+
+    /** Mission state (qualify progress, active mission, completions). */
+    get missionState(): ModeManager {
+        return this.modes;
+    }
 
     /** True once the current ball has been tilted: scoring is disabled and bonus forfeited. */
     get isTilted(): boolean {
@@ -61,6 +82,12 @@ export class RulesEngine {
 
     handle(event: RulesEvent): RulesCommand[] {
         const commands: RulesCommand[] = [];
+        this.handleEvent(event, commands);
+        if ('id' in event && SHOT_EVENTS.has(event.type)) this.modeShot(event.id, commands);
+        return commands;
+    }
+
+    private handleEvent(event: RulesEvent, commands: RulesCommand[]): void {
         switch (event.type) {
             case 'startPressed':
                 if (this.currentPhase === 'attract') this.startGame(commands);
@@ -126,7 +153,13 @@ export class RulesEngine {
             default:
                 break;
         }
-        return commands;
+    }
+
+    /** Feed a playfield shot to the mission framework; only counts during untilted play. */
+    private modeShot(id: string, out: RulesCommand[]): void {
+        if (this.currentPhase !== 'play' || this.tilted) return;
+        const { points } = this.modes.shot(id, out);
+        if (points > 0) this.award(points, out);
     }
 
     /** Award points and bonus for a playfield feature; ignored outside active play. */
@@ -155,6 +188,7 @@ export class RulesEngine {
         this.ball = 0;
         this.extraBalls = 0;
         this.rampShots = 0;
+        this.modes.reset();
         this.nextBall(out);
     }
 
@@ -175,6 +209,7 @@ export class RulesEngine {
     }
 
     private startBonus(out: RulesCommand[]): void {
+        this.modes.endBall(out);
         this.currentPhase = 'bonus';
         this.timer = BONUS_COUNT_SECONDS;
         out.push({ type: 'display', text: `BONUS ${this.bonus} X${this.multiplier}` });
@@ -185,6 +220,7 @@ export class RulesEngine {
         if (this.currentPhase === 'play' && this.saveTimer > 0) {
             this.saveTimer = Math.max(0, this.saveTimer - dt);
         }
+        if (this.currentPhase === 'play') this.modes.advance(dt, out);
         if (this.currentPhase !== 'bonus' && this.currentPhase !== 'gameOver') return;
         this.timer -= dt;
         if (this.timer > 0) return;
