@@ -297,3 +297,60 @@ describe('multiball', () => {
         expect(engine.phase).toBe('bonus');
     });
 });
+
+describe('wizard mode', () => {
+    const mission = {
+        id: 'only',
+        name: 'ONLY',
+        qualify: ['target'],
+        objective: { shot: 'bumper', count: 1 },
+        timeLimit: 30,
+        award: 1000,
+    };
+    const target = (e: RulesEngine) => e.handle({ type: 'targetHit', id: 'target-1', ballId: 0 });
+    const bumper = (e: RulesEngine) =>
+        e.handle({ type: 'bumperHit', id: 'bumper-1', ballId: 0, speed: 1 });
+
+    function unlocked(): { engine: RulesEngine; commands: ReturnType<typeof bumper> } {
+        const engine = new RulesEngine([mission]);
+        engine.handle({ type: 'startPressed' });
+        engine.handle({ type: 'ballLaunched', ballId: 0 });
+        target(engine);
+        return { engine, commands: bumper(engine) };
+    }
+
+    it('does not start until every mission is complete', () => {
+        const engine = new RulesEngine();
+        engine.handle({ type: 'startPressed' });
+        engine.handle({ type: 'ballLaunched', ballId: 0 });
+        expect(engine.wizardActive).toBe(false);
+    });
+
+    it('starts when the last mission completes and pays every shot', () => {
+        const { engine, commands } = unlocked();
+        expect(engine.wizardActive).toBe(true);
+        expect(commands).toContainEqual({ type: 'display', text: 'WIZARD MODE' });
+        const shot = bumper(engine);
+        expect(shot).toContainEqual(expect.objectContaining({ type: 'score', points: 5000 }));
+    });
+
+    it('completes on timeout with an award, once per game', () => {
+        const { engine } = unlocked();
+        const commands = engine.handle({ type: 'tick', dt: 61 });
+        expect(engine.wizardActive).toBe(false);
+        expect(engine.wizardCompleted).toBe(true);
+        expect(commands).toContainEqual({ type: 'display', text: 'WIZARD COMPLETE' });
+        expect(commands).toContainEqual(expect.objectContaining({ type: 'score', points: 250000 }));
+        bumper(engine);
+        expect(engine.wizardActive).toBe(false);
+    });
+
+    it('ends without award when the ball drains', () => {
+        const { engine } = unlocked();
+        engine.handle({ type: 'tick', dt: 11 });
+        const commands = engine.handle({ type: 'drain', ballId: 0 });
+        expect(engine.wizardActive).toBe(false);
+        expect(engine.wizardCompleted).toBe(false);
+        expect(commands).toContainEqual({ type: 'display', text: 'WIZARD OVER' });
+    });
+});

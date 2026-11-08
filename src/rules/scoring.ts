@@ -33,6 +33,10 @@ export const SCORING = {
     /** Jackpots collected before the super jackpot is lit on the orbit. */
     jackpotsForSuper: 3,
     superJackpot: 100000,
+    /** Wizard mode: seconds it lasts, points per playfield shot, and the completion award. */
+    wizardSeconds: 60,
+    wizardShot: 5000,
+    wizardAward: 250000,
 } as const;
 
 /** Points and bonus for a path exit, or null if the path is not a scoring shot. */

@@ -18,7 +18,7 @@ A full pinball rule set implemented as a headless state machine that reacts to p
 - [ ] Mode system: at least three missions started by completing shot sequences, with timers and progress carried across balls
 - [ ] Combo shots for chained orbit/ramp hits
 - [ ] Multiball (2 or 3 balls) with jackpot and super-jackpot
-- [ ] Wizard mode unlocked by completing all missions
+- [x] Wizard mode unlocked by completing all missions
 - [ ] Rules are data-plus-code and fully unit-testable by feeding event sequences and asserting score, lamps and mode state
 
 ## Acceptance Criteria

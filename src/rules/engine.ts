@@ -44,6 +44,8 @@ export class RulesEngine {
     private orbitShots = 0;
     private jackpots = 0;
     private superLit = false;
+    private wizardTime = 0;
+    private wizardWon = false;
     private readonly modes: ModeManager;
 
     constructor(missions: readonly MissionDef[] = MISSIONS) {
@@ -83,6 +85,16 @@ export class RulesEngine {
     /** True when the next orbit exit collects the super jackpot. */
     get superJackpotLit(): boolean {
         return this.superLit;
+    }
+
+    /** True while wizard mode (unlocked by completing every mission) is running. */
+    get wizardActive(): boolean {
+        return this.wizardTime > 0;
+    }
+
+    /** True once wizard mode has been played to completion this game. */
+    get wizardCompleted(): boolean {
+        return this.wizardWon;
     }
 
     get score(): number {
@@ -193,6 +205,27 @@ export class RulesEngine {
         if (this.currentPhase !== 'play' || this.tilted) return;
         const { points } = this.modes.shot(id, out);
         if (points > 0) this.award(points, out);
+        if (this.wizardTime > 0) {
+            this.award(SCORING.wizardShot, out);
+        } else if (!this.wizardWon && this.modes.allCompleted) {
+            this.wizardTime = SCORING.wizardSeconds;
+            this.saveTimer = 0;
+            out.push({ type: 'display', text: 'WIZARD MODE' });
+            out.push({ type: 'sound', name: 'wizardStart' });
+        }
+    }
+
+    private endWizard(completed: boolean, out: RulesCommand[]): void {
+        if (this.wizardTime <= 0) return;
+        this.wizardTime = 0;
+        if (completed) {
+            this.wizardWon = true;
+            this.award(SCORING.wizardAward, out);
+            out.push({ type: 'display', text: 'WIZARD COMPLETE' });
+            out.push({ type: 'sound', name: 'wizardComplete' });
+        } else {
+            out.push({ type: 'display', text: 'WIZARD OVER' });
+        }
     }
 
     /** Award points and bonus for a playfield feature; ignored outside active play. */
@@ -280,6 +313,8 @@ export class RulesEngine {
         this.ball = 0;
         this.extraBalls = 0;
         this.rampShots = 0;
+        this.wizardTime = 0;
+        this.wizardWon = false;
         this.modes.reset();
         this.nextBall(out);
     }
@@ -309,6 +344,7 @@ export class RulesEngine {
 
     private startBonus(out: RulesCommand[]): void {
         this.modes.endBall(out);
+        this.endWizard(false, out);
         this.currentPhase = 'bonus';
         this.timer = BONUS_COUNT_SECONDS;
         out.push({ type: 'display', text: `BONUS ${this.bonus} X${this.multiplier}` });
@@ -321,6 +357,10 @@ export class RulesEngine {
         }
         if (this.currentPhase === 'play') {
             this.modes.advance(dt, out);
+            if (this.wizardTime > 0) {
+                if (this.wizardTime - dt <= 0) this.endWizard(true, out);
+                else this.wizardTime -= dt;
+            }
             if (this.comboTimer > 0) {
                 this.comboTimer = Math.max(0, this.comboTimer - dt);
                 if (this.comboTimer === 0) this.comboCount = 0;
