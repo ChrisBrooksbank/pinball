@@ -22,6 +22,7 @@ import { LampBank } from '@core/lamps';
 import type { TableSim } from '@physics/table-sim';
 import type { Vec2 } from '@physics/vec2';
 import { createPlayfieldTexture } from './artwork';
+import { buildDressing } from './dressing';
 import { PALETTE } from './palette';
 
 const LAMP_ON = 2.2;
@@ -112,6 +113,8 @@ export function buildTableScene(sim: TableSim): TableScene {
         emissive: PALETTE.goldGlow,
         emissiveIntensity: 1.4,
     });
+    const cabinet = new MeshStandardMaterial({ color: 0x1a0f33, roughness: 0.7 });
+    const dressingMaterials = { chrome, accent, neon, gold, cabinet };
 
     // Artwork carries its own colours; fall back to the flat dark colour where no canvas exists.
     const artwork = createPlayfieldTexture(table);
@@ -135,12 +138,29 @@ export function buildTableScene(sim: TableSim): TableScene {
     backglass.position.set(0, backglassHeight / 2, -cy);
     root.add(backglass);
 
+    // Headboard dressing: neon marquee above the display and cabinet pillars either side.
+    const marquee = new Mesh(
+        cachedGeometry('marquee', () => new BoxGeometry(table.bounds.width, 0.03, 0.03)),
+        accent
+    );
+    marquee.position.set(0, backglassHeight + 0.015, -cy);
+    root.add(marquee);
+    for (const sign of [-1, 1]) {
+        const pillar = new Mesh(
+            cachedGeometry('pillar', () => new BoxGeometry(0.04, backglassHeight, 0.04)),
+            cabinet
+        );
+        pillar.position.set((sign * (table.bounds.width + 0.04)) / 2, backglassHeight / 2, -cy);
+        root.add(pillar);
+    }
+
     const bar = (
         a: Vec2,
         b: Vec2,
         material: MeshStandardMaterial,
         height: number,
-        thickness: number
+        thickness: number,
+        elevation = 0
     ): void => {
         const len = Math.hypot(b.x - a.x, b.y - a.y);
         const mesh = new Mesh(
@@ -150,7 +170,7 @@ export function buildTableScene(sim: TableSim): TableScene {
             ),
             material
         );
-        place(mesh, (a.x + b.x) / 2, (a.y + b.y) / 2, height / 2);
+        place(mesh, (a.x + b.x) / 2, (a.y + b.y) / 2, elevation + height / 2);
         mesh.rotation.y = -Math.atan2(b.y - a.y, b.x - a.x);
         root.add(mesh);
     };
@@ -181,6 +201,30 @@ export function buildTableScene(sim: TableSim): TableScene {
         );
         place(mesh, b.center.x, b.center.y, 0.02);
         root.add(mesh);
+    }
+
+    for (const part of buildDressing(table)) {
+        const material = dressingMaterials[part.material];
+        if (part.kind === 'bar') {
+            bar(
+                { x: part.ax, y: part.ay },
+                { x: part.bx, y: part.by },
+                material,
+                part.height,
+                part.thickness,
+                part.elevation
+            );
+        } else {
+            const mesh = new Mesh(
+                cachedGeometry(
+                    `post:${part.radius}:${part.height}`,
+                    () => new CylinderGeometry(part.radius, part.radius, part.height, 12)
+                ),
+                material
+            );
+            place(mesh, part.x, part.y, part.height / 2);
+            root.add(mesh);
+        }
     }
 
     const insertGeometry = new CircleGeometry(0.01, 16);

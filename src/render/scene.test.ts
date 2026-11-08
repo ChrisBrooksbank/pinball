@@ -96,3 +96,28 @@ describe('lamps', () => {
         expect(intensityOf()).toBe(off);
     });
 });
+
+describe('3D dressing', () => {
+    it('adds posts, ramp rails and cabinet parts for the table', async () => {
+        const { buildDressing } = await import('./dressing');
+        const parts = buildDressing(PLAYFIELD);
+        expect(parts.filter(p => p.kind === 'post').length).toBeGreaterThan(10);
+        const ramps = PLAYFIELD.paths.filter(p => p.kind === 'ramp').length;
+        const rails = parts.filter(
+            p => p.kind === 'bar' && p.material === 'chrome' && p.elevation > 0
+        );
+        expect(ramps).toBeGreaterThan(0);
+        expect(rails.length).toBeGreaterThanOrEqual(ramps * 2);
+        const cabinet = parts.filter(p => p.material === 'cabinet');
+        expect(cabinet.length).toBe(3);
+        for (const p of parts) {
+            if (p.kind === 'post') expect(p.height).toBeGreaterThan(0);
+        }
+    });
+
+    it('adds the dressing and headboard meshes to the scene', () => {
+        const scene = buildTableScene(new TableSim(PLAYFIELD));
+        const withDressing = scene.root.children.length;
+        expect(withDressing).toBeGreaterThan(PLAYFIELD.walls.length + 30);
+    });
+});

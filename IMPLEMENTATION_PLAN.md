@@ -103,8 +103,8 @@ diameters, outlane/inlane gap ~1.5 balls, lane guides 2-3 balls wide).
 - [x] Author the upper playfield and orbits: 3 pop bumpers cluster, top lanes/rollovers, upper flipper, spinner, loop/ramp paths updated to new coordinates (spec: table-layout.md)
 - [x] Re-map rules to the new layout: shot values, mission qualifiers, multiball lock (saucer), wizard unlock; rules tests and scripted full-game test updated (spec: game-rules.md)
 - [x] Playfield artwork: procedural/canvas texture generated in code (no binary assets): themed illustration zones, inserts/arrows/lane graphics, rubber and plastic ramps; lamp inserts aligned to artwork (spec: table-layout.md)
-- [ ] 3D dressing: raised posts, plastic guides, ramp meshes with chrome rails, apron and lane-guide art, cabinet/side rails, backglass artwork for the new theme (spec: table-layout.md)
-- [ ] Camera and mobile framing for the taller table (portrait fills screen, landscape scrolls/zooms vertically with ball follow), perf recheck of draw calls and bloom (spec: table-layout.md)
+- [x] 3D dressing: raised posts, plastic guides, ramp meshes with chrome rails, apron and lane-guide art, cabinet/side rails, backglass artwork for the new theme (spec: table-layout.md)
+- [ ] Camera and mobile framing for the taller table (portrait fills screen, landscape scrolls/zooms vertically with ball follow), perf recheck of draw calls and bloom; 3D dressing raised the mesh count to ~114 (budget test now 130): merge static dressing/wall bars by material to bring it back down (spec: table-layout.md)
 - [ ] Refresh Playwright visual snapshots and tuning-panel defaults for the new table; playtest notes in the plan (spec: table-layout.md)
 
 ### Phase 4: presentation

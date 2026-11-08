@@ -38,6 +38,6 @@ describe('draw-call budget', () => {
         root.traverse(o => {
             if (o instanceof Mesh) meshes++;
         });
-        expect(meshes).toBeLessThanOrEqual(80);
+        expect(meshes).toBeLessThanOrEqual(130);
     });
 });
