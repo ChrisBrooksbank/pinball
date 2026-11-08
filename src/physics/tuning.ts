@@ -1,5 +1,5 @@
 import { createMaterials, type SurfaceType } from './materials';
-import type { Sandbox } from './sandbox';
+import type { TableSim } from './table-sim';
 
 interface TuningParam {
     id: string;
@@ -12,10 +12,10 @@ interface TuningParam {
 }
 
 /**
- * Live-tunable feel parameters for a sandbox. Restitution and friction are scales applied to the
+ * Live-tunable feel parameters for a table sim. Restitution and friction are scales applied to the
  * default per-surface materials (restitution clamped to 1), so one slider moves every surface.
  */
-export function createTuningParams(sandbox: Sandbox): TuningParam[] {
+export function createTuningParams(sandbox: TableSim): TuningParam[] {
     const { world } = sandbox;
     const defaults = createMaterials();
     const surfaces = Object.keys(defaults) as SurfaceType[];

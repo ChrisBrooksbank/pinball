@@ -18,7 +18,8 @@ import {
 } from 'three';
 import { FixedStepper } from '@core/loop';
 import { createDebugPanel } from '@/debug-panel';
-import { SANDBOX_HEIGHT, SANDBOX_WIDTH, Sandbox } from '@physics/sandbox';
+import { TableSim } from '@physics/table-sim';
+import { PLAYFIELD } from '@/table/playfield';
 
 const canvas = document.getElementById('game');
 if (!(canvas instanceof HTMLCanvasElement)) {
@@ -31,13 +32,13 @@ const camera = new PerspectiveCamera(45, 1, 0.05, 20);
 camera.position.set(0, 1.1, 0.95);
 camera.lookAt(0, 0, 0.05);
 
-const CENTER_X = SANDBOX_WIDTH / 2;
-const CENTER_Y = SANDBOX_HEIGHT / 2;
-const sandbox = new Sandbox();
+const CENTER_X = PLAYFIELD.bounds.width / 2;
+const CENTER_Y = PLAYFIELD.bounds.height / 2;
+const sandbox = new TableSim(PLAYFIELD);
 const debugPanel = createDebugPanel(sandbox);
 
 const table = new Mesh(
-    new PlaneGeometry(SANDBOX_WIDTH, SANDBOX_HEIGHT),
+    new PlaneGeometry(PLAYFIELD.bounds.width, PLAYFIELD.bounds.height),
     new MeshStandardMaterial({ color: 0x1b0f3a, roughness: 0.6 })
 );
 table.rotation.x = -Math.PI / 2;

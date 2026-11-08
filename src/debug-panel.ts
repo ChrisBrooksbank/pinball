@@ -1,11 +1,11 @@
-import type { Sandbox } from '@physics/sandbox';
+import type { TableSim } from '@physics/table-sim';
 import { createTuningParams } from '@physics/tuning';
 
 /**
  * Hidden debug overlay with live tuning sliders and ball readout. Toggle with the backquote key.
  * `update` should be called once per rendered frame.
  */
-export function createDebugPanel(sandbox: Sandbox): { update(): void } {
+export function createDebugPanel(sandbox: TableSim): { update(): void } {
     const root = document.createElement('div');
     root.id = 'debug-panel';
     root.hidden = true;

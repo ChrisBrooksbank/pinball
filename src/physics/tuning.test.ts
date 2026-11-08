@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { Sandbox } from './sandbox';
+import { TableSim } from './table-sim';
+import { PLAYFIELD } from '../table/playfield';
 import { createTuningParams } from './tuning';
 
 function setup() {
-    const sandbox = new Sandbox();
+    const sandbox = new TableSim(PLAYFIELD);
     const params = createTuningParams(sandbox);
     const get = (id: string) => {
         const p = params.find(q => q.id === id);
