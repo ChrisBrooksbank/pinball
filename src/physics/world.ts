@@ -6,6 +6,7 @@ import {
     type Segment,
     type SweepHit,
 } from './collision';
+import { Flipper, type FlipperConfig } from './flipper';
 import {
     createMaterials,
     type Materials,
@@ -68,6 +69,7 @@ export class World {
     readonly balls: Ball[] = [];
     readonly segments: WallSegment[] = [];
     readonly arcs: WallArc[] = [];
+    readonly flippers: Flipper[] = [];
     readonly config: WorldConfig;
     readonly events = new EventQueue();
     /** Per-surface material constants; mutable so a tuning panel can adjust them live. */
@@ -81,6 +83,12 @@ export class World {
     get gravityAlongTable(): Vec2 {
         const a = GRAVITY * Math.sin((this.config.tiltDegrees * Math.PI) / 180);
         return vec2(0, a);
+    }
+
+    addFlipper(config: FlipperConfig): Flipper {
+        const flipper = new Flipper(config);
+        this.flippers.push(flipper);
+        return flipper;
     }
 
     addBall(pos: Vec2, vel: Vec2 = vec2(), radius = 0.027): Ball {
@@ -110,6 +118,7 @@ export class World {
     /** Advance the simulation by `dt` seconds (semi-implicit Euler with swept segment collisions). */
     step(dt: number): void {
         const g = this.gravityAlongTable;
+        for (const flipper of this.flippers) flipper.step(dt);
         for (const ball of this.balls) {
             ball.vel = add(ball.vel, scale(g, dt));
             this.moveBall(ball, dt);
