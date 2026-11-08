@@ -10,6 +10,7 @@ import { chooseRenderQuality } from '@render/quality';
 import { buildTableScene } from '@render/scene';
 import { PLAYFIELD } from '@/table/playfield';
 import { GameDriver } from '@/game-driver';
+import { attachAccelerometer } from '@/input/accelerometer';
 import { ActionState } from '@/input/actions';
 import { GamepadInput, type PadLike } from '@/input/gamepad';
 import { handleKey } from '@/input/keyboard';
@@ -63,6 +64,7 @@ function onKey(down: boolean, e: KeyboardEvent): void {
 window.addEventListener('keydown', e => onKey(true, e));
 window.addEventListener('keyup', e => onKey(false, e));
 attachTouch(canvas, actions);
+attachAccelerometer(canvas, direction => sandbox.world.nudge(direction));
 
 function resize(): void {
     const { clientWidth: w, clientHeight: h } = canvas as HTMLCanvasElement;
