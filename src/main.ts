@@ -2,6 +2,7 @@ import { ACESFilmicToneMapping, PerspectiveCamera, Scene, WebGLRenderer } from '
 import { FixedStepper } from '@core/loop';
 import { createDebugPanel } from '@/debug-panel';
 import { TableSim } from '@physics/table-sim';
+import { applyCameraFraming } from '@render/camera';
 import { createChromeEnvironment } from '@render/environment';
 import { createPostProcessing } from '@render/post';
 import { buildTableScene } from '@render/scene';
@@ -17,8 +18,6 @@ renderer.toneMapping = ACESFilmicToneMapping;
 const scene = new Scene();
 scene.environment = createChromeEnvironment(renderer);
 const camera = new PerspectiveCamera(45, 1, 0.05, 20);
-camera.position.set(0, 1.1, 0.95);
-camera.lookAt(0, 0, 0.05);
 
 const sandbox = new TableSim(PLAYFIELD);
 const debugPanel = createDebugPanel(sandbox);
@@ -54,8 +53,7 @@ function resize(): void {
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(w, h, false);
     post.setSize(w, h, pixelRatio);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
+    applyCameraFraming(camera, w / h, PLAYFIELD.bounds);
 }
 window.addEventListener('resize', resize);
 resize();
