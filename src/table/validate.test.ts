@@ -30,6 +30,7 @@ function makeTable(): TableDef {
         slingshots: [],
         targets: [],
         spinners: [],
+        paths: [],
         lanes: [],
         plungerLane: {
             id: 'pl',

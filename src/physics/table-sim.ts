@@ -13,6 +13,7 @@ export function buildWorld(table: TableDef, world = new World()): World {
     for (const s of table.slingshots) world.addSlingshot(s.id, s.a, s.b, s.kick);
     for (const t of table.targets) world.addTarget(t.id, t.a, t.b);
     for (const s of table.spinners) world.addSpinner(s.id, s.a, s.b);
+    for (const p of table.paths) world.addPath(p);
     for (const f of table.flippers) world.addFlipper(f.config);
     world.addPlunger(table.plungerLane.plunger);
     return world;

@@ -1,6 +1,14 @@
 import type { FlipperConfig } from '../physics/flipper';
 import { vec2 } from '../physics/vec2';
-import type { LampDef, LaneDef, SlingshotDef, TableDef, TargetDef, WallDef } from './types';
+import type {
+    LampDef,
+    LaneDef,
+    ScriptedPathDef,
+    SlingshotDef,
+    TableDef,
+    TargetDef,
+    WallDef,
+} from './types';
 
 /** The playfield is symmetric about this x; the plunger lane sits to its right. */
 const MIRROR_X = 0.44;
@@ -76,6 +84,37 @@ const RAW_LANES: Omit<LaneDef, 'lampId'>[] = [
 ];
 const LANES: LaneDef[] = RAW_LANES.map(lane => ({ ...lane, lampId: `lamp-${lane.id}` }));
 
+const PATHS: ScriptedPathDef[] = [
+    {
+        // Left orbit: up the left side, over the top, and back down the right side.
+        id: 'orbit-left',
+        kind: 'orbit',
+        entry: { a: vec2(0.015, 0.42), b: vec2(0.06, 0.42) },
+        entryDirection: vec2(0, -1),
+        minSpeed: 1.5,
+        points: [
+            vec2(0.035, 0.42),
+            vec2(0.04, 0.3),
+            vec2(0.22, 0.05),
+            vec2(0.4, 0.3),
+            vec2(0.41, 0.5),
+        ],
+        speed: 3,
+        exitSpeed: 1.5,
+    },
+    {
+        // Centre ramp: shot up the middle, delivered to the top of the playfield.
+        id: 'ramp-centre',
+        kind: 'ramp',
+        entry: { a: vec2(0.18, 0.6), b: vec2(0.26, 0.6) },
+        entryDirection: vec2(0, -1),
+        minSpeed: 2,
+        points: [vec2(0.22, 0.6), vec2(0.22, 0.4), vec2(0.22, 0.2)],
+        speed: 2.5,
+        exitSpeed: 0.8,
+    },
+];
+
 const BUMPER_POSITIONS = [vec2(0.15, 0.36), vec2(0.29, 0.36), vec2(0.22, 0.45)];
 
 const LAMPS: LampDef[] = [
@@ -125,6 +164,7 @@ export const PLAYFIELD: TableDef = {
     slingshots: SLINGSHOTS,
     targets: TARGETS,
     spinners: [{ id: 'spinner-1', a: vec2(0.36, 0.4), b: vec2(0.36, 0.46) }],
+    paths: PATHS,
     lanes: LANES,
     plungerLane: {
         id: 'plunger-lane',

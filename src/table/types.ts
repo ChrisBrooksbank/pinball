@@ -63,6 +63,28 @@ export interface LaneDef {
     lampId?: string;
 }
 
+/**
+ * A scripted ball path (orbit or ramp). A ball crossing the entry trigger fast enough, in the
+ * entry direction, is carried along `points` at `speed` ignoring playfield collisions, then
+ * released from the last point with `exitSpeed` along the final path segment.
+ */
+export interface ScriptedPathDef {
+    id: string;
+    kind: 'orbit' | 'ramp';
+    /** Entry trigger segment. */
+    entry: { a: Vec2; b: Vec2 };
+    /** Ball must be moving with a positive component along this direction to enter. */
+    entryDirection: Vec2;
+    /** Minimum ball speed (m/s) to enter. */
+    minSpeed: number;
+    /** Path waypoints (at least two); the ball is carried along the polyline. */
+    points: Vec2[];
+    /** Travel speed along the path (m/s). */
+    speed: number;
+    /** Speed (m/s) at which the ball leaves the last point. */
+    exitSpeed: number;
+}
+
 export interface PlungerLaneDef {
     id: string;
     plunger: PlungerConfig;
@@ -95,6 +117,7 @@ export interface TableDef {
     slingshots: SlingshotDef[];
     targets: TargetDef[];
     spinners: SpinnerDef[];
+    paths: ScriptedPathDef[];
     lanes: LaneDef[];
     plungerLane: PlungerLaneDef;
     drain: DrainDef;

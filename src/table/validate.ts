@@ -52,6 +52,7 @@ export function validateTable(table: TableDef): string[] {
         ...table.slingshots,
         ...table.targets,
         ...table.spinners,
+        ...table.paths,
         ...table.lanes,
         table.plungerLane,
         table.drain,
@@ -89,6 +90,12 @@ export function validateTable(table: TableDef): string[] {
     ]) {
         checkPoint(e.id, e.a);
         checkPoint(e.id, e.b);
+    }
+    for (const path of table.paths) {
+        checkPoint(path.id, path.entry.a);
+        checkPoint(path.id, path.entry.b);
+        for (const p of path.points) checkPoint(path.id, p);
+        if (path.points.length < 2) problems.push(`${path.id} needs at least two points`);
     }
     for (const b of table.bumpers) {
         const c = b.center;

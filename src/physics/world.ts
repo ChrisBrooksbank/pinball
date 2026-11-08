@@ -13,7 +13,9 @@ import {
     type SurfaceMaterial,
     type SurfaceType,
 } from './materials';
+import { movementCrossesSegment, PolylinePath } from './path';
 import { Plunger, type PlungerConfig } from './plunger';
+import type { ScriptedPathDef } from '../table/types';
 import { add, scale, vec2, type Vec2 } from './vec2';
 
 /** Standard gravity in m/s^2. */
@@ -23,6 +25,13 @@ interface Ball {
     pos: Vec2;
     vel: Vec2;
     radius: number;
+    /** Set while the ball is carried along a scripted path (orbit/ramp). */
+    path?: { scripted: ScriptedPath; distance: number };
+}
+
+interface ScriptedPath {
+    def: ScriptedPathDef;
+    line: PolylinePath;
 }
 
 /** A moving collider (flipper, plunger) that contributes surface velocity to contacts. */
@@ -127,6 +136,7 @@ export class World {
     readonly plungers: Plunger[] = [];
     readonly bumpers: PopBumper[] = [];
     readonly spinners: Spinner[] = [];
+    readonly paths: ScriptedPath[] = [];
     readonly config: WorldConfig;
     readonly events = new EventQueue();
     /** Per-surface material constants; mutable so a tuning panel can adjust them live. */
@@ -217,6 +227,13 @@ export class World {
         return spinner;
     }
 
+    /** Scripted orbit/ramp: balls crossing the entry are carried along the path, then released. */
+    addPath(def: ScriptedPathDef): ScriptedPath {
+        const path = { def, line: new PolylinePath(def.points) };
+        this.paths.push(path);
+        return path;
+    }
+
     addBall(pos: Vec2, vel: Vec2 = vec2(), radius = 0.027): Ball {
         const ball = { pos, vel, radius };
         this.balls.push(ball);
@@ -248,6 +265,11 @@ export class World {
         for (const flipper of this.flippers) flipper.step(dt);
         for (const plunger of this.plungers) plunger.step(dt);
         for (const ball of this.balls) {
+            if (ball.path) {
+                this.advanceOnPath(ball, dt);
+                continue;
+            }
+            if (this.checkPathEntry(ball, dt)) continue;
             ball.vel = add(ball.vel, scale(g, dt));
             this.resolveFlipperPenetration(ball, dt);
             this.resolvePlungerPenetration(ball, dt);
@@ -285,6 +307,37 @@ export class World {
                 b.vel = add(b.vel, scale(normal, j2));
             }
         }
+    }
+
+    /** Capture the ball onto a scripted path if it crosses an entry trigger this step. */
+    private checkPathEntry(ball: Ball, dt: number): boolean {
+        const d = scale(ball.vel, dt);
+        const speed = Math.hypot(ball.vel.x, ball.vel.y);
+        for (const scripted of this.paths) {
+            const { entry, entryDirection, minSpeed, id } = scripted.def;
+            if (speed < minSpeed) continue;
+            if (ball.vel.x * entryDirection.x + ball.vel.y * entryDirection.y <= 0) continue;
+            if (!movementCrossesSegment(ball.pos, d, entry.a, entry.b)) continue;
+            ball.path = { scripted, distance: 0 };
+            ball.pos = scripted.line.positionAt(0);
+            ball.vel = vec2();
+            this.events.push({ type: 'pathEnter', id, ballId: this.balls.indexOf(ball) });
+            return true;
+        }
+        return false;
+    }
+
+    /** Move a captured ball along its path; release it with the exit velocity at the end. */
+    private advanceOnPath(ball: Ball, dt: number): void {
+        const state = ball.path;
+        if (!state) return;
+        const { line, def } = state.scripted;
+        state.distance += def.speed * dt;
+        ball.pos = line.positionAt(state.distance);
+        if (state.distance < line.length) return;
+        ball.vel = scale(line.exitDirection, def.exitSpeed);
+        ball.path = undefined;
+        this.events.push({ type: 'pathExit', id: def.id, ballId: this.balls.indexOf(ball) });
     }
 
     /** Detect the ball centre crossing a spinner this step and spin it up in proportion to speed. */

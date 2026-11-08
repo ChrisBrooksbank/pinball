@@ -57,7 +57,7 @@ Every spec requirement is unimplemented.
 - [x] Table validation tests: unique ids, no flipper/wall overlap, all elements inside bounds (spec: table-layout.md)
 - [x] Author the playfield: 2 flippers, inlanes/outlanes, slingshots, 3 pop bumpers, target bank(s), spinner, plunger lane (spec: table-layout.md)
 - [x] Physics builds colliders from table definition; replace sandbox playfield in main (spec: table-layout.md)
-- [ ] Scripted paths: orbit and ramp (entry trigger, path points, exit position/velocity, events); unit test enter/exit points (spec: table-layout.md)
+- [x] Scripted paths: orbit and ramp (entry trigger, path points, exit position/velocity, events); unit test enter/exit points (spec: table-layout.md)
 - [ ] `src/render` scene builder from table definition: playfield, walls, chrome rails, bumpers, targets, flippers synced to physics state (spec: table-layout.md)
 - [ ] Shared geometry/material cache for repeated parts (spec: table-layout.md)
 - [ ] Retro look: neon palette on dark playfield, emissive inserts, environment-map chrome ball, bloom post-processing (spec: table-layout.md)

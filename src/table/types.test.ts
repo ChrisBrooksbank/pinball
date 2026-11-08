@@ -38,6 +38,7 @@ describe('TableDef', () => {
             slingshots: [{ id: 's1', a: vec2(0.1, 0.7), b: vec2(0.15, 0.8) }],
             targets: [{ id: 't1', a: vec2(0.2, 0.3), b: vec2(0.25, 0.3) }],
             spinners: [{ id: 'sp1', a: vec2(0.3, 0.4), b: vec2(0.35, 0.4) }],
+            paths: [],
             lanes: [{ id: 'in1', kind: 'inlane', a: vec2(0.05, 0.8), b: vec2(0.08, 0.8) }],
             plungerLane: {
                 id: 'pl',

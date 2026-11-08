@@ -7,5 +7,7 @@ export type PhysicsEvent =
     | { type: 'flipperHit'; id: string; ballId: number; speed: number }
     | { type: 'wallHit'; ballId: number; speed: number }
     | { type: 'laneEnter'; id: string; ballId: number }
+    | { type: 'pathEnter'; id: string; ballId: number }
+    | { type: 'pathExit'; id: string; ballId: number }
     | { type: 'drain'; ballId: number }
     | { type: 'tilt' };
