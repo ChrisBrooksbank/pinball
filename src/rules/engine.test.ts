@@ -8,6 +8,10 @@ function playing(): RulesEngine {
     return engine;
 }
 
+/** Drain after the ball-save window has expired. */ function drain(engine: RulesEngine): void {
+    engine.handle({ type: 'tick', dt: 11 });
+    engine.handle({ type: 'drain', ballId: 0 });
+}
 describe('game flow', () => {
     it('starts in attract and ignores scoring until a game starts', () => {
         const engine = new RulesEngine();
@@ -29,7 +33,7 @@ describe('game flow', () => {
     it('drain leads to bonus count then the next ball', () => {
         const engine = playing();
         engine.handle({ type: 'bumperHit', id: 'b', ballId: 0, speed: 1 });
-        engine.handle({ type: 'drain', ballId: 0 });
+        drain(engine);
         expect(engine.phase).toBe('bonus');
         const commands = engine.handle({ type: 'tick', dt: 3 });
         expect(commands).toContainEqual({ type: 'score', points: 50, total: 150 });
@@ -44,7 +48,7 @@ describe('game flow', () => {
         for (let ball = 1; ball <= 3; ball++) {
             expect(engine.ballNumber).toBe(ball);
             engine.handle({ type: 'ballLaunched', ballId: 0 });
-            engine.handle({ type: 'drain', ballId: 0 });
+            drain(engine);
             engine.handle({ type: 'tick', dt: 3 });
         }
         expect(engine.phase).toBe('gameOver');
@@ -60,7 +64,7 @@ describe('game flow', () => {
         engine.handle({ type: 'bumperHit', id: 'b', ballId: 0, speed: 1 });
         for (let i = 0; i < 3; i++) {
             if (i > 0) engine.handle({ type: 'ballLaunched', ballId: 0 });
-            engine.handle({ type: 'drain', ballId: 0 });
+            drain(engine);
             engine.handle({ type: 'tick', dt: 3 });
         }
         engine.handle({ type: 'tick', dt: 4 });
@@ -130,7 +134,7 @@ describe('scoring', () => {
         for (let i = 0; i < 3; i++) engine.handle({ type: 'targetHit', id: 't', ballId: 0 });
         expect(engine.bonusMultiplier).toBe(2);
         const before = engine.score;
-        engine.handle({ type: 'drain', ballId: 0 });
+        drain(engine);
         const commands = engine.handle({ type: 'tick', dt: 3 });
         expect(commands).toContainEqual({ type: 'score', points: 1500, total: before + 1500 });
         expect(engine.bonusMultiplier).toBe(1);
@@ -147,7 +151,7 @@ describe('scoring', () => {
         for (let i = 0; i < 3; i++)
             engine.handle({ type: 'pathExit', id: 'ramp-centre', ballId: 0 });
         expect(engine.extraBallsPending).toBe(1);
-        engine.handle({ type: 'drain', ballId: 0 });
+        drain(engine);
         const commands = engine.handle({ type: 'tick', dt: 3 });
         expect(commands).toContainEqual({ type: 'addBall' });
         expect(engine.ballNumber).toBe(1);
@@ -160,5 +164,41 @@ describe('scoring', () => {
         engine.handle({ type: 'startPressed' });
         engine.handle({ type: 'targetHit', id: 't', ballId: 0 });
         expect(engine.score).toBe(0);
+    });
+});
+
+describe('ball save and tilt', () => {
+    it('returns a ball drained shortly after launch without bonus or ball advance', () => {
+        const engine = playing();
+        expect(engine.ballSaveActive).toBe(true);
+        const commands = engine.handle({ type: 'drain', ballId: 0 });
+        expect(commands).toContainEqual({ type: 'addBall' });
+        expect(engine.phase).toBe('plunger');
+        expect(engine.ballNumber).toBe(1);
+        expect(engine.ballSaveActive).toBe(false);
+    });
+
+    it('ball save expires after the timer', () => {
+        const engine = playing();
+        engine.handle({ type: 'tick', dt: 11 });
+        expect(engine.ballSaveActive).toBe(false);
+        engine.handle({ type: 'drain', ballId: 0 });
+        expect(engine.phase).toBe('bonus');
+    });
+
+    it('tilt forfeits bonus, stops scoring and skips ball save', () => {
+        const engine = playing();
+        engine.handle({ type: 'bumperHit', id: 'b', ballId: 0, speed: 1 });
+        const commands = engine.handle({ type: 'tilt' });
+        expect(commands).toContainEqual({ type: 'display', text: 'TILT' });
+        expect(engine.isTilted).toBe(true);
+        engine.handle({ type: 'bumperHit', id: 'b', ballId: 0, speed: 1 });
+        expect(engine.score).toBe(100);
+        engine.handle({ type: 'drain', ballId: 0 });
+        expect(engine.phase).toBe('bonus');
+        const next = engine.handle({ type: 'tick', dt: 3 });
+        expect(next.some(c => c.type === 'score')).toBe(false);
+        expect(engine.score).toBe(100);
+        expect(engine.isTilted).toBe(false);
     });
 });

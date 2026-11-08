@@ -7,6 +7,8 @@ const BALLS_PER_GAME = 3;
 const BONUS_COUNT_SECONDS = 2;
 /** Seconds the game over screen is shown before returning to attract. */
 const GAME_OVER_SECONDS = 3;
+/** Seconds after launch during which a drained ball is returned to the plunger lane. */
+const BALL_SAVE_SECONDS = 10;
 
 type GamePhase = 'attract' | 'plunger' | 'play' | 'bonus' | 'gameOver';
 
@@ -21,6 +23,18 @@ export class RulesEngine {
     private targetHits = 0;
     private rampShots = 0;
     private extraBalls = 0;
+    private saveTimer = 0;
+    private tilted = false;
+
+    /** True once the current ball has been tilted: scoring is disabled and bonus forfeited. */
+    get isTilted(): boolean {
+        return this.tilted;
+    }
+
+    /** True while a drained ball would be saved. */
+    get ballSaveActive(): boolean {
+        return this.saveTimer > 0;
+    }
 
     get score(): number {
         return this.total;
@@ -54,11 +68,29 @@ export class RulesEngine {
             case 'ballLaunched':
                 if (this.currentPhase === 'plunger') {
                     this.currentPhase = 'play';
+                    this.saveTimer = BALL_SAVE_SECONDS;
                     commands.push({ type: 'display', text: `BALL ${this.ball}` });
                 }
                 break;
             case 'drain':
-                if (this.currentPhase === 'play') this.startBonus(commands);
+                if (this.currentPhase !== 'play') break;
+                if (this.saveTimer > 0 && !this.tilted) {
+                    this.saveTimer = 0;
+                    this.currentPhase = 'plunger';
+                    commands.push({ type: 'addBall' });
+                    commands.push({ type: 'display', text: 'BALL SAVED' });
+                    commands.push({ type: 'sound', name: 'ballSave' });
+                } else {
+                    this.startBonus(commands);
+                }
+                break;
+            case 'tilt':
+                if (this.currentPhase !== 'play' || this.tilted) break;
+                this.tilted = true;
+                this.bonus = 0;
+                this.saveTimer = 0;
+                commands.push({ type: 'display', text: 'TILT' });
+                commands.push({ type: 'sound', name: 'tilt' });
                 break;
             case 'tick':
                 this.advanceTimer(event.dt, commands);
@@ -67,7 +99,7 @@ export class RulesEngine {
                 this.scorePlay(SCORING.bumper, SCORING.bonusBumper, 'bumper', commands);
                 break;
             case 'targetHit':
-                if (this.currentPhase !== 'play') break;
+                if (this.currentPhase !== 'play' || this.tilted) break;
                 this.scorePlay(SCORING.target, SCORING.bonusTarget, 'target', commands);
                 this.targetHits += 1;
                 if (this.targetHits % SCORING.targetsPerMultiplier === 0) {
@@ -99,7 +131,7 @@ export class RulesEngine {
 
     /** Award points and bonus for a playfield feature; ignored outside active play. */
     private scorePlay(points: number, bonus: number, sound: string, out: RulesCommand[]): void {
-        if (this.currentPhase !== 'play') return;
+        if (this.currentPhase !== 'play' || this.tilted) return;
         this.award(points, out);
         this.bonus += bonus;
         out.push({ type: 'sound', name: sound });
@@ -109,7 +141,7 @@ export class RulesEngine {
         const value = pathValue(id);
         if (!value) return;
         this.scorePlay(value.points, value.bonus, value.kind, out);
-        if (this.currentPhase !== 'play' || value.kind !== 'ramp') return;
+        if (this.currentPhase !== 'play' || this.tilted || value.kind !== 'ramp') return;
         this.rampShots += 1;
         if (this.rampShots % SCORING.rampsForExtraBall === 0) {
             this.extraBalls += 1;
@@ -135,6 +167,8 @@ export class RulesEngine {
         this.bonus = 0;
         this.multiplier = 1;
         this.targetHits = 0;
+        this.tilted = false;
+        this.saveTimer = 0;
         this.currentPhase = 'plunger';
         out.push({ type: 'addBall' });
         out.push({ type: 'display', text: `BALL ${this.ball}` });
@@ -148,6 +182,9 @@ export class RulesEngine {
     }
 
     private advanceTimer(dt: number, out: RulesCommand[]): void {
+        if (this.currentPhase === 'play' && this.saveTimer > 0) {
+            this.saveTimer = Math.max(0, this.saveTimer - dt);
+        }
         if (this.currentPhase !== 'bonus' && this.currentPhase !== 'gameOver') return;
         this.timer -= dt;
         if (this.timer > 0) return;
