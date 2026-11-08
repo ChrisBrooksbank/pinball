@@ -1,4 +1,5 @@
 import { EventQueue } from './event-queue';
+import { createMaterials, type Materials } from './materials';
 import { add, scale, vec2, type Vec2 } from './vec2';
 
 /** Standard gravity in m/s^2. */
@@ -22,6 +23,8 @@ export class World {
     readonly balls: Ball[] = [];
     readonly config: WorldConfig;
     readonly events = new EventQueue();
+    /** Per-surface material constants; mutable so a tuning panel can adjust them live. */
+    readonly materials: Materials = createMaterials();
 
     constructor(config: Partial<WorldConfig> = {}) {
         this.config = { ...DEFAULT_WORLD_CONFIG, ...config };
