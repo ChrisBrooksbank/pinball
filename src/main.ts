@@ -1,5 +1,6 @@
 import { ACESFilmicToneMapping, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
 import { HighScores } from '@core/highscores';
+import { AttractMode } from '@core/attract';
 import { InitialsEntry } from '@core/initials';
 import { Music } from '@/audio/music';
 import { Sfx } from '@/audio/sfx';
@@ -51,6 +52,9 @@ status.style.cssText =
 document.body.appendChild(status);
 
 const highScores = new HighScores(typeof localStorage === 'undefined' ? null : localStorage);
+const attract = new AttractMode();
+let attractFlippers = false;
+let wasAttract = true;
 let wasGameOver = false;
 let entry: InitialsEntry | null = null;
 let entryScore = 0;
@@ -157,12 +161,30 @@ renderer.setAnimationLoop(now => {
         renderEntry();
     }
     wasGameOver = isGameOver;
-    status.textContent = `${game.displayText}  ${game.rules.score}`;
+    const inAttract = game.rules.phase === 'attract' && !entry;
+    if (inAttract && !wasAttract) attract.reset();
+    wasAttract = inAttract;
+    let shownText = game.displayText;
+    if (inAttract) {
+        attract.update(frame);
+        shownText = attract.text(highScores.list());
+        const up = attract.flippersUp();
+        if (up !== attractFlippers) {
+            attractFlippers = up;
+            for (const f of [...sandbox.flippersFor('left'), ...sandbox.flippersFor('right')])
+                f.setHeld(up);
+        }
+    } else if (attractFlippers) {
+        attractFlippers = false;
+        for (const f of [...sandbox.flippersFor('left'), ...sandbox.flippersFor('right')])
+            f.setHeld(false);
+    }
+    status.textContent = `${shownText}  ${game.rules.score}`;
     dmd.update(
         {
             score: game.rules.score,
             ball: game.rules.phase === 'attract' ? 0 : game.rules.ballNumber,
-            text: game.displayText,
+            text: shownText,
         },
         frame
     );

@@ -4,7 +4,7 @@ export interface StorageLike {
     setItem(key: string, value: string): void;
 }
 
-interface HighScore {
+export interface HighScore {
     initials: string;
     score: number;
 }
