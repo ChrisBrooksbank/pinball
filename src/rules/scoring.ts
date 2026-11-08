@@ -18,6 +18,12 @@ export const SCORING = {
     maxMultiplier: 5,
     /** Ramp shots needed to light an extra ball. */
     rampsForExtraBall: 3,
+    /** Seconds after an orbit/ramp exit in which the next one chains a combo. */
+    comboWindow: 4,
+    /** Extra points per combo level beyond the first shot (level 2 pays 1x, level 3 pays 2x...). */
+    comboStep: 1000,
+    /** Highest combo level that increases the payout. */
+    maxCombo: 6,
 } as const;
 
 /** Points and bonus for a path exit, or null if the path is not a scoring shot. */

@@ -126,7 +126,7 @@ describe('scoring', () => {
         engine.handle({ type: 'pathExit', id: 'orbit-left', ballId: 0 });
         engine.handle({ type: 'pathExit', id: 'ramp-centre', ballId: 0 });
         engine.handle({ type: 'pathExit', id: 'mystery', ballId: 0 });
-        expect(engine.score).toBe(1500 + 3000);
+        expect(engine.score).toBe(1500 + 3000 + 1000); // includes combo bonus
     });
 
     it('raises the bonus multiplier every three targets and applies it at ball end', () => {
@@ -200,5 +200,41 @@ describe('ball save and tilt', () => {
         expect(next.some(c => c.type === 'score')).toBe(false);
         expect(engine.score).toBe(100);
         expect(engine.isTilted).toBe(false);
+    });
+});
+
+describe('combo shots', () => {
+    const orbit = (e: RulesEngine) => e.handle({ type: 'pathExit', id: 'orbit-left', ballId: 0 });
+    const ramp = (e: RulesEngine) => e.handle({ type: 'pathExit', id: 'ramp-centre', ballId: 0 });
+
+    it('chains orbit and ramp inside the window with growing payout', () => {
+        const engine = playing();
+        orbit(engine);
+        expect(engine.combo).toBe(1);
+        const second = ramp(engine);
+        expect(engine.combo).toBe(2);
+        expect(second).toContainEqual({ type: 'display', text: 'COMBO X2' });
+        expect(second).toContainEqual(expect.objectContaining({ type: 'score', points: 1000 }));
+        const third = orbit(engine);
+        expect(third).toContainEqual(expect.objectContaining({ type: 'score', points: 2000 }));
+        expect(engine.combo).toBe(3);
+    });
+
+    it('resets when the window expires', () => {
+        const engine = playing();
+        orbit(engine);
+        engine.handle({ type: 'tick', dt: 5 });
+        expect(engine.combo).toBe(0);
+        const commands = orbit(engine);
+        expect(engine.combo).toBe(1);
+        expect(commands.some(c => c.type === 'display')).toBe(false);
+    });
+
+    it('does not chain while tilted', () => {
+        const engine = playing();
+        engine.handle({ type: 'tilt' });
+        orbit(engine);
+        orbit(engine);
+        expect(engine.combo).toBe(0);
     });
 });

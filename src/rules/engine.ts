@@ -36,6 +36,8 @@ export class RulesEngine {
     private rampShots = 0;
     private extraBalls = 0;
     private saveTimer = 0;
+    private comboTimer = 0;
+    private comboCount = 0;
     private tilted = false;
     private readonly modes: ModeManager;
 
@@ -56,6 +58,11 @@ export class RulesEngine {
     /** True while a drained ball would be saved. */
     get ballSaveActive(): boolean {
         return this.saveTimer > 0;
+    }
+
+    /** Current combo chain length (orbit/ramp shots within the combo window); 0 when none. */
+    get combo(): number {
+        return this.comboCount;
     }
 
     get score(): number {
@@ -175,13 +182,26 @@ export class RulesEngine {
         const value = pathValue(id);
         if (!value) return;
         this.scorePlay(value.points, value.bonus, value.kind, out);
-        if (this.currentPhase !== 'play' || this.tilted || value.kind !== 'ramp') return;
+        if (this.currentPhase !== 'play' || this.tilted) return;
+        this.comboShot(out);
+        if (value.kind !== 'ramp') return;
         this.rampShots += 1;
         if (this.rampShots % SCORING.rampsForExtraBall === 0) {
             this.extraBalls += 1;
             out.push({ type: 'display', text: 'EXTRA BALL' });
             out.push({ type: 'sound', name: 'extraBall' });
         }
+    }
+
+    /** Chain orbit/ramp exits: each one inside the window raises the combo and pays a growing bonus. */
+    private comboShot(out: RulesCommand[]): void {
+        this.comboCount = this.comboTimer > 0 ? this.comboCount + 1 : 1;
+        this.comboTimer = SCORING.comboWindow;
+        if (this.comboCount < 2) return;
+        const level = Math.min(this.comboCount, SCORING.maxCombo);
+        this.award((level - 1) * SCORING.comboStep, out);
+        out.push({ type: 'display', text: `COMBO X${this.comboCount}` });
+        out.push({ type: 'sound', name: 'combo' });
     }
 
     private startGame(out: RulesCommand[]): void {
@@ -204,6 +224,8 @@ export class RulesEngine {
         this.targetHits = 0;
         this.tilted = false;
         this.saveTimer = 0;
+        this.comboTimer = 0;
+        this.comboCount = 0;
         this.currentPhase = 'plunger';
         out.push({ type: 'addBall' });
         out.push({ type: 'display', text: `BALL ${this.ball}` });
@@ -221,7 +243,13 @@ export class RulesEngine {
         if (this.currentPhase === 'play' && this.saveTimer > 0) {
             this.saveTimer = Math.max(0, this.saveTimer - dt);
         }
-        if (this.currentPhase === 'play') this.modes.advance(dt, out);
+        if (this.currentPhase === 'play') {
+            this.modes.advance(dt, out);
+            if (this.comboTimer > 0) {
+                this.comboTimer = Math.max(0, this.comboTimer - dt);
+                if (this.comboTimer === 0) this.comboCount = 0;
+            }
+        }
         if (this.currentPhase !== 'bonus' && this.currentPhase !== 'gameOver') return;
         this.timer -= dt;
         if (this.timer > 0) return;
