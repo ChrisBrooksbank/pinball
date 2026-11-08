@@ -54,7 +54,7 @@ Every spec requirement is unimplemented.
 ### Phase 2: table-layout
 
 - [x] Typed table definition (`src/table`): walls, flippers, bumpers, targets, lanes, spinner, plunger lane, drain, lamps with unique ids (spec: table-layout.md)
-- [ ] Table validation tests: unique ids, no flipper/wall overlap, all elements inside bounds (spec: table-layout.md)
+- [x] Table validation tests: unique ids, no flipper/wall overlap, all elements inside bounds (spec: table-layout.md)
 - [ ] Author the playfield: 2 flippers, inlanes/outlanes, slingshots, 3 pop bumpers, target bank(s), spinner, plunger lane (spec: table-layout.md)
 - [ ] Physics builds colliders from table definition; replace sandbox playfield in main (spec: table-layout.md)
 - [ ] Scripted paths: orbit and ramp (entry trigger, path points, exit position/velocity, events); unit test enter/exit points (spec: table-layout.md)
