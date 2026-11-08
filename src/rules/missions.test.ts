@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RulesEngine } from '@rules/engine';
-import { BUMPER_RUSH, MISSIONS } from '@rules/missions';
+import { BUMPER_RUSH, MISSIONS, SPIN_CYCLE } from '@rules/missions';
 
 function playing(): RulesEngine {
     const engine = new RulesEngine();
@@ -45,5 +45,47 @@ describe('mission 1: bumper rush', () => {
         expect(engine.missionState.activeId).toBeNull();
         expect(engine.missionState.isCompleted('bumper-rush')).toBe(false);
         expect(commands).toContainEqual({ type: 'display', text: 'BUMPER RUSH FAILED' });
+    });
+});
+
+const exit = (e: RulesEngine, id: string) => e.handle({ type: 'pathExit', id, ballId: 0 });
+const spin = (e: RulesEngine) =>
+    e.handle({ type: 'spinnerSpin', id: 'spinner-1', ballId: 0, angularVelocity: 5 });
+
+describe('mission 2: spin cycle', () => {
+    it('is registered', () => {
+        expect(MISSIONS).toContain(SPIN_CYCLE);
+    });
+
+    it('starts after orbit then ramp, not ramp then orbit', () => {
+        const wrong = playing();
+        exit(wrong, 'ramp-centre');
+        exit(wrong, 'orbit-left');
+        expect(wrong.missionState.activeId).toBeNull();
+
+        const engine = playing();
+        exit(engine, 'orbit-left');
+        const commands = exit(engine, 'ramp-centre');
+        expect(engine.missionState.activeId).toBe('spin-cycle');
+        expect(commands).toContainEqual({ type: 'display', text: 'SPIN CYCLE START' });
+    });
+
+    it('completes after twenty spins and awards points', () => {
+        const engine = playing();
+        exit(engine, 'orbit-left');
+        exit(engine, 'ramp-centre');
+        const before = engine.score;
+        for (let i = 0; i < 20; i++) spin(engine);
+        expect(engine.missionState.isCompleted('spin-cycle')).toBe(true);
+        expect(engine.score).toBeGreaterThanOrEqual(before + SPIN_CYCLE.award);
+    });
+
+    it('fails when the timer expires', () => {
+        const engine = playing();
+        exit(engine, 'orbit-left');
+        exit(engine, 'ramp-centre');
+        const commands = engine.handle({ type: 'tick', dt: SPIN_CYCLE.timeLimit + 1 });
+        expect(engine.missionState.isCompleted('spin-cycle')).toBe(false);
+        expect(commands).toContainEqual({ type: 'display', text: 'SPIN CYCLE FAILED' });
     });
 });

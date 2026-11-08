@@ -10,5 +10,15 @@ export const BUMPER_RUSH: MissionDef = {
     award: 25000,
 };
 
+/** Mission 2: loop the orbit, then the ramp, then spin the spinner hard before time runs out. */
+export const SPIN_CYCLE: MissionDef = {
+    id: 'spin-cycle',
+    name: 'SPIN CYCLE',
+    qualify: ['orbit', 'ramp'],
+    objective: { shot: 'spinner', count: 20 },
+    timeLimit: 40,
+    award: 40000,
+};
+
 /** Mission definitions (data). Missions are added here one at a time. */
-export const MISSIONS: readonly MissionDef[] = [BUMPER_RUSH];
+export const MISSIONS: readonly MissionDef[] = [BUMPER_RUSH, SPIN_CYCLE];
