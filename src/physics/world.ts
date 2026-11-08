@@ -13,6 +13,7 @@ import {
     type SurfaceMaterial,
     type SurfaceType,
 } from './materials';
+import { Plunger, type PlungerConfig } from './plunger';
 import { add, scale, vec2, type Vec2 } from './vec2';
 
 /** Standard gravity in m/s^2. */
@@ -22,6 +23,11 @@ interface Ball {
     pos: Vec2;
     vel: Vec2;
     radius: number;
+}
+
+/** A moving collider (flipper, plunger) that contributes surface velocity to contacts. */
+interface MovingSurface {
+    surfaceVelocity(point: Vec2): Vec2;
 }
 
 interface WallSegment extends Segment {
@@ -76,6 +82,7 @@ export class World {
     readonly segments: WallSegment[] = [];
     readonly arcs: WallArc[] = [];
     readonly flippers: Flipper[] = [];
+    readonly plungers: Plunger[] = [];
     readonly config: WorldConfig;
     readonly events = new EventQueue();
     /** Per-surface material constants; mutable so a tuning panel can adjust them live. */
@@ -95,6 +102,12 @@ export class World {
         const flipper = new Flipper(config);
         this.flippers.push(flipper);
         return flipper;
+    }
+
+    addPlunger(config: PlungerConfig): Plunger {
+        const plunger = new Plunger(config);
+        this.plungers.push(plunger);
+        return plunger;
     }
 
     addBall(pos: Vec2, vel: Vec2 = vec2(), radius = 0.027): Ball {
@@ -125,9 +138,11 @@ export class World {
     step(dt: number): void {
         const g = this.gravityAlongTable;
         for (const flipper of this.flippers) flipper.step(dt);
+        for (const plunger of this.plungers) plunger.step(dt);
         for (const ball of this.balls) {
             ball.vel = add(ball.vel, scale(g, dt));
             this.resolveFlipperPenetration(ball, dt);
+            this.resolvePlungerPenetration(ball, dt);
             this.moveBall(ball, dt);
         }
     }
@@ -152,7 +167,7 @@ export class World {
                     bestSurface = arc.surface;
                 }
             }
-            let hitFlipper: Flipper | null = null;
+            let hitMover: MovingSurface | null = null;
             for (const flipper of this.flippers) {
                 const { sides, circles } = flipper.outline;
                 const candidates: { hit: SweepHit | null }[] = [
@@ -168,8 +183,16 @@ export class World {
                     if (hit && (!best || hit.t < best.t)) {
                         best = hit;
                         bestSurface = 'flipper';
-                        hitFlipper = flipper;
+                        hitMover = flipper;
                     }
+                }
+            }
+            for (const plunger of this.plungers) {
+                const hit = sweepCircleSegment(ball.pos, d, ball.radius, plunger.face);
+                if (hit && (!best || hit.t < best.t)) {
+                    best = hit;
+                    bestSurface = 'plunger';
+                    hitMover = plunger;
                 }
             }
             if (!best) {
@@ -178,7 +201,7 @@ export class World {
             }
             // Stop at the contact point, nudged off the surface to avoid re-detecting it.
             ball.pos = add(add(ball.pos, scale(d, best.t)), scale(best.normal, CONTACT_SKIN));
-            this.resolveContact(ball, best.normal, bestSurface, dt, hitFlipper);
+            this.resolveContact(ball, best.normal, bestSurface, dt, hitMover);
             remaining *= 1 - best.t;
         }
     }
@@ -198,6 +221,18 @@ export class World {
         }
     }
 
+    /** Push a ball above the plunger tip out of it when the tip drives forward into the ball. */
+    private resolvePlungerPenetration(ball: Ball, dt: number): void {
+        for (const plunger of this.plungers) {
+            const { x, halfWidth } = plunger.config;
+            if (Math.abs(ball.pos.x - x) > halfWidth) continue;
+            const tipY = plunger.tipY;
+            if (ball.pos.y > tipY || ball.pos.y + ball.radius <= tipY) continue;
+            ball.pos = vec2(ball.pos.x, tipY - ball.radius - CONTACT_SKIN);
+            this.resolveContact(ball, vec2(0, -1), 'plunger', dt, plunger);
+        }
+    }
+
     /**
      * Bounce off a surface. A moving flipper contributes the surface velocity at the contact
      * point, so the response works on the ball's velocity relative to that surface.
@@ -207,11 +242,11 @@ export class World {
         normal: Vec2,
         surface: SurfaceType,
         dt: number,
-        flipper: Flipper | null
+        mover: MovingSurface | null
     ): void {
         const mat = this.materials[surface];
         const contact = add(ball.pos, scale(normal, -ball.radius));
-        const surfaceVel = flipper ? flipper.surfaceVelocity(contact) : vec2();
+        const surfaceVel = mover ? mover.surfaceVelocity(contact) : vec2();
         const rel = vec2(ball.vel.x - surfaceVel.x, ball.vel.y - surfaceVel.y);
         const vn = rel.x * normal.x + rel.y * normal.y;
         if (vn >= 0) return;
