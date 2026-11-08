@@ -2,6 +2,7 @@ import './hud.css';
 import { ACESFilmicToneMapping, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
 import { HighScores } from '@core/highscores';
 import { AttractMode } from '@core/attract';
+import { DemoBot } from '@core/demo-bot';
 import { InitialsEntry } from '@core/initials';
 import { Music } from '@/audio/music';
 import { Sfx } from '@/audio/sfx';
@@ -53,8 +54,34 @@ const hud = createHud(() => sfx.toggleMute());
 
 const highScores = new HighScores(typeof localStorage === 'undefined' ? null : localStorage);
 const attract = new AttractMode();
-let attractFlippers = false;
+const demoBot = new DemoBot();
+let demoActive = false;
 let wasAttract = true;
+/** Let the demo bot play the table: it plunges, flips and serves replacement balls. */
+function runDemo(dt: number): void {
+    demoActive = true;
+    const b = sandbox.world.balls[0];
+    const { maxPull } = sandbox.plunger.config;
+    const c = demoBot.update(dt, {
+        ball: b ? { x: b.pos.x, y: b.pos.y, vx: b.vel.x, vy: b.vel.y } : null,
+        pull: sandbox.plunger.pull / maxPull,
+    });
+    if (c.serve) sandbox.serve();
+    sandbox.plunger.setHeld(c.plunger);
+    for (const f of sandbox.flippersFor('left')) f.setHeld(c.left);
+    for (const f of sandbox.flippersFor('right')) f.setHeld(c.right);
+}
+/** Demo over (game starting): release every control and put a fresh ball on the plunger. */
+function endDemo(): void {
+    demoActive = false;
+    demoBot.reset();
+    for (const f of [...sandbox.flippersFor('left'), ...sandbox.flippersFor('right')])
+        f.setHeld(false);
+    sandbox.plunger.setHeld(false);
+    sandbox.plunger.pull = 0;
+    sandbox.world.balls.length = 0;
+    sandbox.serve();
+}
 let wasGameOver = false;
 let entry: InitialsEntry | null = null;
 let entryScore = 0;
@@ -160,16 +187,9 @@ renderer.setAnimationLoop(now => {
     if (inAttract) {
         attract.update(frame);
         shownText = attract.text(highScores.list());
-        const up = attract.flippersUp();
-        if (up !== attractFlippers) {
-            attractFlippers = up;
-            for (const f of [...sandbox.flippersFor('left'), ...sandbox.flippersFor('right')])
-                f.setHeld(up);
-        }
-    } else if (attractFlippers) {
-        attractFlippers = false;
-        for (const f of [...sandbox.flippersFor('left'), ...sandbox.flippersFor('right')])
-            f.setHeld(false);
+        runDemo(frame);
+    } else if (demoActive) {
+        endDemo();
     }
     hud.update({
         phase: game.rules.phase,

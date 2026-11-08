@@ -58,7 +58,7 @@ theme, artwork and text are original):
 - **Slingshots, inlanes and outlanes** guarding the two main flippers
 - **Missions** (_Bumper Rush_, _Spin Cycle_, _Sling Shot_) leading to a **wizard mode**
 - End-of-ball **bonus** with a multiplier up to 5x, extra ball from repeated ramp shots
-- A **dot-matrix display** for callouts, **attract mode**, and a persistent **high-score table**
+- A **dot-matrix display** for callouts, **attract mode with a self-playing demo bot**, and a persistent **high-score table**
 
 Audio is generated live with WebAudio (effects and music); there are no audio files to download.
 

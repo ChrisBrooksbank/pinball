@@ -2,10 +2,6 @@ import type { HighScore } from '@core/highscores';
 
 /** Seconds each attract page stays on the display. */
 export const PAGE_SECONDS = 3;
-/** Seconds between demo flipper flaps. */
-export const FLAP_PERIOD = 1.2;
-/** Seconds a demo flap holds the flippers up. */
-export const FLAP_HOLD = 0.25;
 
 /** Fit a high-score row into the 20-character display line. */
 export function scoreLine(rank: number, entry: HighScore): string {
@@ -13,8 +9,7 @@ export function scoreLine(rank: number, entry: HighScore): string {
 }
 
 /**
- * Idle attract-mode sequencer: cycles title and high-score pages for the display and
- * produces a demo flipper flap pattern. Pure state, driven by `update(dt)`.
+ * Idle attract-mode sequencer: cycles title and high-score pages for the display. Pure state, driven by `update(dt)`.
  */
 export class AttractMode {
     private elapsed = 0;
@@ -37,10 +32,5 @@ export class AttractMode {
     text(scores: readonly HighScore[]): string {
         const pages = this.pages(scores);
         return pages[Math.floor(this.elapsed / PAGE_SECONDS) % pages.length] ?? '';
-    }
-
-    /** True while the demo flippers should be raised. */
-    flippersUp(): boolean {
-        return this.elapsed % FLAP_PERIOD < FLAP_HOLD;
     }
 }

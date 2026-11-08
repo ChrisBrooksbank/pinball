@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AttractMode, FLAP_HOLD, FLAP_PERIOD, PAGE_SECONDS, scoreLine } from './attract';
+import { AttractMode, PAGE_SECONDS, scoreLine } from './attract';
 
 const scores = [
     { initials: 'AAA', score: 12345 },
@@ -24,15 +24,6 @@ describe('AttractMode', () => {
         expect(a.pages([])).toHaveLength(2);
         a.reset();
         expect(a.text([])).toBe('NEON KNIGHT');
-    });
-
-    it('flaps flippers periodically', () => {
-        const a = new AttractMode();
-        expect(a.flippersUp()).toBe(true);
-        a.update(FLAP_HOLD + 0.01);
-        expect(a.flippersUp()).toBe(false);
-        a.update(FLAP_PERIOD - FLAP_HOLD);
-        expect(a.flippersUp()).toBe(true);
     });
 
     it('truncates long score lines to 20 characters', () => {

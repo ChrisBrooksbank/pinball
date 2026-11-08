@@ -98,9 +98,19 @@
     display: none;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 18px;
-    background: radial-gradient(ellipse at center, rgba(6, 2, 26, 0.35), rgba(6, 2, 26, 0.8));
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 4vh 16px;
+    box-sizing: border-box;
+    /* Dim only the top and bottom so the demo play stays visible in between. */
+    background: linear-gradient(
+        to bottom,
+        rgba(6, 2, 26, 0.85),
+        rgba(6, 2, 26, 0.15) 35%,
+        rgba(6, 2, 26, 0.15) 70%,
+        rgba(6, 2, 26, 0.85)
+    );
+    pointer-events: none;
     text-align: center;
 }
 .hud-title h1 {
@@ -122,6 +132,7 @@
     animation: blink 1.1s steps(2, start) infinite;
 }
 .hud-help {
+    margin-top: auto;
     font-size: 12px;
     letter-spacing: 0.12em;
     line-height: 2;
