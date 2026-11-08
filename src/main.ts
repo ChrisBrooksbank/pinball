@@ -10,6 +10,8 @@ import { chooseRenderQuality } from '@render/quality';
 import { buildTableScene } from '@render/scene';
 import { PLAYFIELD } from '@/table/playfield';
 import { GameDriver } from '@/game-driver';
+import { ActionState } from '@/input/actions';
+import { handleKey } from '@/input/keyboard';
 
 const canvas = document.getElementById('game');
 if (!(canvas instanceof HTMLCanvasElement)) {
@@ -41,24 +43,14 @@ status.style.cssText =
     'position:fixed;top:8px;left:8px;color:#0f0;font:16px monospace;pointer-events:none';
 document.body.appendChild(status);
 
-const KEY_ACTIONS: Record<string, 'left' | 'right' | 'plunger'> = {
-    ShiftLeft: 'left',
-    ArrowLeft: 'left',
-    KeyZ: 'left',
-    ShiftRight: 'right',
-    ArrowRight: 'right',
-    Slash: 'right',
-    Space: 'plunger',
-    ArrowDown: 'plunger',
-};
+const actions = new ActionState((action, down) => {
+    if (action === 'flipperLeft') sandbox.left.setHeld(down);
+    else if (action === 'flipperRight') sandbox.right.setHeld(down);
+    else if (action === 'plunger') sandbox.plunger.setHeld(down);
+    else if (down) game.pressStart();
+});
 function onKey(down: boolean, e: KeyboardEvent): void {
-    if (down && e.code === 'Enter' && !e.repeat) game.pressStart();
-    const action = KEY_ACTIONS[e.code];
-    if (!action) return;
-    e.preventDefault();
-    if (action === 'left') sandbox.left.setHeld(down);
-    else if (action === 'right') sandbox.right.setHeld(down);
-    else sandbox.plunger.setHeld(down);
+    if (handleKey(actions, down, e)) e.preventDefault();
 }
 window.addEventListener('keydown', e => onKey(true, e));
 window.addEventListener('keyup', e => onKey(false, e));

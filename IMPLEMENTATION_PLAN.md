@@ -87,7 +87,7 @@ Every spec requirement is unimplemented.
 
 - [x] Dot-matrix display renderer to canvas texture (score, ball, mode text), applied to backglass (spec: presentation.md)
 - [x] DMD animations: jackpot, multiball, extra ball (spec: presentation.md)
-- [ ] Input layer: abstract actions + keyboard mapping (shift/arrows, space plunger); unit tests (spec: presentation.md)
+- [x] Input layer: abstract actions + keyboard mapping (shift/arrows, space plunger); unit tests (spec: presentation.md)
 - [ ] Touch zones mapping + mobile portrait large touch areas (spec: presentation.md)
 - [ ] Gamepad mapping with rumble where available; unit test with mocked gamepad (spec: presentation.md)
 - [ ] Accelerometer nudge with iOS permission via user gesture (spec: presentation.md)
