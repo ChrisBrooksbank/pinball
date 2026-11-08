@@ -42,6 +42,17 @@ const RIGHT_FLIPPER: FlipperConfig = {
     upAngle: Math.PI + 0.5,
 };
 
+/** Upper-playfield flipper (left button); feeds the bumper cluster and the right-hand shots. */
+const UPPER_LEFT_FLIPPER: FlipperConfig = {
+    ...flipperBase,
+    pivot: vec2(0.09, 0.6),
+    restAngle: 0.5,
+    upAngle: -0.5,
+};
+
+/** x positions of the dividers that form the three top rollover lanes (A-B-C). */
+const ROLLOVER_DIVIDERS = [0.17, 0.35, 0.53, 0.71];
+
 /** Walls on the left half as [id, x1, y1, x2, y2]; mirrored to build the right half. */
 const SIDE_WALLS: readonly (readonly [string, number, number, number, number])[] = [
     // Outlane/inlane divider and the slope that feeds the flipper.
@@ -65,6 +76,9 @@ function buildWalls(): WallDef[] {
         walls.push({ id: `${id}-l`, a: vec2(x1, y1), b: vec2(x2, y2) });
         walls.push({ id: `${id}-r`, a: vec2(mx(x1), y1), b: vec2(mx(x2), y2) });
     }
+    ROLLOVER_DIVIDERS.forEach((x, i) =>
+        walls.push({ id: `rollover-divider-${i + 1}`, a: vec2(x, 0.19), b: vec2(x, 0.31) })
+    );
     return walls;
 }
 
@@ -100,10 +114,33 @@ const RAW_LANES: Omit<LaneDef, 'lampId'>[] = [
     { id: 'inlane-left', kind: 'inlane', a: vec2(0.14, 1.48), b: vec2(0.26, 1.48) },
     { id: 'inlane-right', kind: 'inlane', a: vec2(mx(0.26), 1.48), b: vec2(mx(0.14), 1.48) },
     { id: 'outlane-right', kind: 'outlane', a: vec2(mx(0.14), 1.48), b: vec2(0.86, 1.48) },
+    ...['a', 'b', 'c'].map((name, i) => ({
+        id: `rollover-${name}`,
+        kind: 'rollover' as const,
+        a: vec2(ROLLOVER_DIVIDERS[i]!, 0.25),
+        b: vec2(ROLLOVER_DIVIDERS[i + 1]!, 0.25),
+    })),
 ];
 const LANES: LaneDef[] = RAW_LANES.map(lane => ({ ...lane, lampId: `lamp-${lane.id}` }));
 
 const PATHS: ScriptedPathDef[] = [
+    {
+        // Right orbit: up the right side, over the top, and back down the left side.
+        id: 'orbit-right',
+        kind: 'orbit',
+        entry: { a: vec2(0.76, 0.9), b: vec2(0.85, 0.9) },
+        entryDirection: vec2(0, -1),
+        minSpeed: 1.5,
+        points: [
+            vec2(0.81, 0.9),
+            vec2(0.8, 0.6),
+            vec2(0.44, 0.1),
+            vec2(0.08, 0.6),
+            vec2(0.07, 0.86),
+        ],
+        speed: 3,
+        exitSpeed: 1.5,
+    },
     {
         // Left orbit: up the left side, over the top, and back down the right side.
         id: 'orbit-left',
@@ -134,7 +171,7 @@ const PATHS: ScriptedPathDef[] = [
     },
 ];
 
-const BUMPER_POSITIONS = [vec2(0.3, 0.72), vec2(0.58, 0.72), vec2(0.44, 0.9)];
+const BUMPER_POSITIONS = [vec2(0.4, 0.62), vec2(0.62, 0.62), vec2(0.51, 0.8)];
 
 const LAMPS: LampDef[] = [
     ...BUMPER_POSITIONS.map((p, i) => ({
@@ -157,11 +194,11 @@ const LAMPS: LampDef[] = [
     ...LANES.map(lane => ({
         id: `lamp-${lane.id}`,
         pos: vec2((lane.a.x + lane.b.x) / 2, lane.a.y + 0.06),
-        color: lane.kind === 'inlane' ? '#ffe600' : '#ff3b30',
+        color: { inlane: '#ffe600', outlane: '#ff3b30', rollover: '#00f0ff' }[lane.kind],
     })),
 ];
 
-/** The one original table: two flippers, slingshots, 3 pop bumpers, a target bank, a spinner. */
+/** The one original table: two lower flippers, an upper flipper, slingshots, 3 pop bumpers, drop banks, rollovers, a spinner. */
 export const PLAYFIELD: TableDef = {
     name: 'Neon Orbit',
     bounds: { width: 1.04, height: 2.16 },
@@ -180,6 +217,7 @@ export const PLAYFIELD: TableDef = {
     flippers: [
         { id: 'flipper-left', side: 'left', config: LEFT_FLIPPER },
         { id: 'flipper-right', side: 'right', config: RIGHT_FLIPPER },
+        { id: 'flipper-upper-left', side: 'left', level: 'upper', config: UPPER_LEFT_FLIPPER },
     ],
     bumpers: BUMPER_POSITIONS.map((center, i) => ({
         id: `bumper-${i + 1}`,
@@ -190,7 +228,7 @@ export const PLAYFIELD: TableDef = {
     slingshots: SLINGSHOTS,
     targets: TARGETS,
     dropBanks: DROP_BANKS,
-    spinners: [{ id: 'spinner-1', a: vec2(0.72, 0.8), b: vec2(0.72, 0.92) }],
+    spinners: [{ id: 'spinner-1', a: vec2(0.78, 0.6), b: vec2(0.78, 0.72) }],
     paths: PATHS,
     lanes: LANES,
     plungerLane: {

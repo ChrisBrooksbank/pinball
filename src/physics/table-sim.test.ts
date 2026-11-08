@@ -75,3 +75,12 @@ describe('buildWorld', () => {
         expect(world.plungers).toHaveLength(1);
     });
 });
+
+describe('Table sim upper flipper', () => {
+    it('drives lower and upper flippers from the same side', () => {
+        const box = new TableSim(PLAYFIELD);
+        expect(box.flippersFor('left')).toHaveLength(2);
+        expect(box.flippersFor('right')).toHaveLength(1);
+        expect(box.flippersFor('left')).toContain(box.left);
+    });
+});

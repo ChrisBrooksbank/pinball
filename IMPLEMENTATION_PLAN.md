@@ -100,7 +100,7 @@ diameters, outlane/inlane gap ~1.5 balls, lane guides 2-3 balls wide).
 - [x] Rescale: set real-proportion bounds and ball radius ratio, scale all existing elements, retune flipper dimensions, plunger travel and camera framing; physics tests still pass, add a table-proportion test (ball diameters across, flipper length) (spec: table-layout.md)
 - [x] New element types in `src/table` + physics: drop-target bank (reset on clear), kickout saucer/hole with eject, second-level (upper) playfield flipper; validation + unit tests (spec: table-layout.md)
 - [x] Author the full-size lower playfield: flippers, inlanes/outlanes, slingshots, return lanes, side-lane guides, target banks (spec: table-layout.md)
-- [ ] Author the upper playfield and orbits: 3 pop bumpers cluster, top lanes/rollovers, upper flipper, spinner, loop/ramp paths updated to new coordinates (spec: table-layout.md)
+- [x] Author the upper playfield and orbits: 3 pop bumpers cluster, top lanes/rollovers, upper flipper, spinner, loop/ramp paths updated to new coordinates (spec: table-layout.md)
 - [ ] Re-map rules to the new layout: shot values, mission qualifiers, multiball lock (saucer), wizard unlock; rules tests and scripted full-game test updated (spec: game-rules.md)
 - [ ] Playfield artwork: procedural/canvas texture generated in code (no binary assets): themed illustration zones, inserts/arrows/lane graphics, rubber and plastic ramps; lamp inserts aligned to artwork (spec: table-layout.md)
 - [ ] 3D dressing: raised posts, plastic guides, ramp meshes with chrome rails, apron and lane-guide art, cabinet/side rails, backglass artwork for the new theme (spec: table-layout.md)

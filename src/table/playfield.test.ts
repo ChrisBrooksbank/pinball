@@ -8,7 +8,12 @@ describe('PLAYFIELD', () => {
     });
 
     it('has the required element set', () => {
-        expect(PLAYFIELD.flippers.map(f => f.side).sort()).toEqual(['left', 'right']);
+        expect(
+            PLAYFIELD.flippers
+                .filter(f => f.level !== 'upper')
+                .map(f => f.side)
+                .sort()
+        ).toEqual(['left', 'right']);
         expect(PLAYFIELD.bumpers).toHaveLength(3);
         expect(PLAYFIELD.slingshots).toHaveLength(2);
         expect(PLAYFIELD.targets.length).toBeGreaterThanOrEqual(3);
@@ -70,6 +75,26 @@ describe('PLAYFIELD lower playfield', () => {
             const x = bank.targets[0]!.a.x;
             const wallGap = Math.min(x - 0.072, 0.86 - x, x - 0.02);
             expect(wallGap).toBeGreaterThan(d * 1.5);
+        }
+    });
+});
+
+describe('PLAYFIELD upper playfield', () => {
+    it('has an upper flipper, three rollovers and both orbits', () => {
+        expect(PLAYFIELD.flippers.filter(f => f.level === 'upper')).toHaveLength(1);
+        expect(PLAYFIELD.lanes.filter(l => l.kind === 'rollover')).toHaveLength(3);
+        const orbits = PLAYFIELD.paths.filter(p => p.kind === 'orbit').map(p => p.id);
+        expect(orbits.sort()).toEqual(['orbit-left', 'orbit-right']);
+    });
+
+    it('keeps the upper flipper above the lower playfield and the bumpers clear of it', () => {
+        const upper = PLAYFIELD.flippers.find(f => f.level === 'upper')!.config;
+        expect(upper.pivot.y).toBeLessThan(PLAYFIELD.flippers[0]!.config.pivot.y / 2);
+        const reach = upper.length + upper.tipRadius + PLAYFIELD.ballRadius * 2;
+        for (const b of PLAYFIELD.bumpers) {
+            expect(
+                Math.hypot(b.center.x - upper.pivot.x, b.center.y - upper.pivot.y)
+            ).toBeGreaterThan(reach + b.radius);
         }
     });
 });

@@ -57,8 +57,9 @@ window.addEventListener('keydown', unlockAudio);
 const actions = new ActionState((action, down) => {
     canvas.dataset[action] = down ? 'down' : 'up'; // observable by e2e tests
     if (down && (action === 'flipperLeft' || action === 'flipperRight')) sfx.play('flipper');
-    if (action === 'flipperLeft') sandbox.left.setHeld(down);
-    else if (action === 'flipperRight') sandbox.right.setHeld(down);
+    if (action === 'flipperLeft') for (const f of sandbox.flippersFor('left')) f.setHeld(down);
+    else if (action === 'flipperRight')
+        for (const f of sandbox.flippersFor('right')) f.setHeld(down);
     else if (action === 'plunger') {
         sandbox.plunger.setHeld(down);
         if (!down) gamepad.rumble(pads(), 0.4, 60);

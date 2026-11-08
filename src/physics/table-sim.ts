@@ -35,8 +35,10 @@ export class TableSim {
 
     constructor(readonly table: TableDef) {
         this.world = buildWorld(table);
-        const left = this.world.flippers[table.flippers.findIndex(f => f.side === 'left')];
-        const right = this.world.flippers[table.flippers.findIndex(f => f.side === 'right')];
+        const lowerIndex = (side: 'left' | 'right'): number =>
+            table.flippers.findIndex(f => f.side === side && f.level !== 'upper');
+        const left = this.world.flippers[lowerIndex('left')];
+        const right = this.world.flippers[lowerIndex('right')];
         const plunger = this.world.plungers[0];
         if (!left || !right || !plunger) {
             throw new Error('Table needs a left flipper, a right flipper and a plunger');
@@ -45,6 +47,11 @@ export class TableSim {
         this.right = right;
         this.plunger = plunger;
         this.serve();
+    }
+
+    /** Every flipper (lower and upper) driven by the given side's button. */
+    flippersFor(side: 'left' | 'right'): Flipper[] {
+        return this.world.flippers.filter((_, i) => this.table.flippers[i]?.side === side);
     }
 
     /** Put a fresh ball on the plunger. */
