@@ -1,4 +1,11 @@
 import { DataTexture, NearestFilter, RGBAFormat, SRGBColorSpace } from 'three';
+import {
+    type DmdAnimationKind,
+    animationDuration,
+    animationForText,
+    animationFrame,
+    drawAnimationFrame,
+} from './dmd-animations';
 import { GLYPH_WIDTH, glyphFor } from './dmd-font';
 
 export const DMD_COLUMNS = 128;
@@ -89,6 +96,8 @@ export class DmdDisplay {
     private readonly height = (DMD_ROWS + PANEL_PAD_ROWS * 2) * DOT_PX;
     private readonly pixels: Uint8Array<ArrayBuffer>;
     private lastKey = '';
+    private lastText = '';
+    private animation: { kind: DmdAnimationKind; text: string; elapsed: number } | null = null;
 
     constructor() {
         this.pixels = new Uint8Array(this.width * this.height * 4);
@@ -98,12 +107,34 @@ export class DmdDisplay {
         this.draw();
     }
 
-    /** Redraw the texture if the state changed since the last call. Returns true when it did. */
-    update(state: DmdState): boolean {
-        const key = `${state.ball}|${state.score}|${state.text}`;
+    /** Kind of the animation currently playing, if any. */
+    get activeAnimation(): DmdAnimationKind | null {
+        return this.animation?.kind ?? null;
+    }
+
+    /**
+     * Redraw the texture if the state (or animation frame) changed since the last call. `dt` is the
+     * seconds elapsed since the previous call and advances any running animation. A new message that
+     * maps to an animation (jackpot, multiball, extra ball) starts it. Returns true when redrawn.
+     */
+    update(state: DmdState, dt = 0): boolean {
+        if (state.text !== this.lastText) {
+            this.lastText = state.text;
+            const kind = animationForText(state.text);
+            this.animation = kind ? { kind, text: state.text, elapsed: 0 } : null;
+        } else if (this.animation) {
+            this.animation.elapsed += dt;
+        }
+        const anim = this.animation;
+        if (anim && anim.elapsed >= animationDuration(anim.kind)) this.animation = null;
+
+        const active = this.animation;
+        const frame = active ? animationFrame(active.elapsed) : -1;
+        const key = `${state.ball}|${state.score}|${state.text}|${active?.kind ?? ''}|${frame}`;
         if (key === this.lastKey) return false;
         this.lastKey = key;
-        drawDmdState(this.matrix, state);
+        if (active) drawAnimationFrame(this.matrix, active.kind, frame, active.text);
+        else drawDmdState(this.matrix, state);
         this.draw();
         return true;
     }

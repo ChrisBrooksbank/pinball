@@ -84,11 +84,14 @@ renderer.setAnimationLoop(now => {
     });
     game.update(frame);
     status.textContent = `${game.displayText}  ${game.rules.score}`;
-    dmd.update({
-        score: game.rules.score,
-        ball: game.rules.phase === 'attract' ? 0 : game.rules.ballNumber,
-        text: game.displayText,
-    });
+    dmd.update(
+        {
+            score: game.rules.score,
+            ball: game.rules.phase === 'attract' ? 0 : game.rules.ballNumber,
+            text: game.displayText,
+        },
+        frame
+    );
     tableScene.lamps.update(frame);
     tableScene.sync();
     debugPanel.update();

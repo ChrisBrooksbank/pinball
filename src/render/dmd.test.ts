@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DMD_COLUMNS, DMD_ROWS, DmdDisplay, DotMatrix, drawDmdState, formatScore } from './dmd';
+import { animationDuration, animationForText, drawAnimationFrame } from './dmd-animations';
 
 function litCount(m: DotMatrix): number {
     return m.dots.reduce((a, b) => a + b, 0);
@@ -91,5 +92,56 @@ describe('DmdDisplay', () => {
         for (let i = 0; i < data.length; i += 4) reds.add(data[i]!);
         expect(reds.has(255)).toBe(true);
         expect(reds.size).toBeGreaterThan(2);
+    });
+});
+
+describe('DMD animations', () => {
+    const base = { score: 0, ball: 1 };
+
+    it('maps trigger messages to animations', () => {
+        expect(animationForText('JACKPOT')).toBe('jackpot');
+        expect(animationForText('SUPER JACKPOT')).toBe('jackpot');
+        expect(animationForText('MULTIBALL')).toBe('multiball');
+        expect(animationForText('EXTRA BALL')).toBe('extraBall');
+        expect(animationForText('MULTIBALL OVER')).toBeNull();
+        expect(animationForText('SUPER JACKPOT LIT')).toBeNull();
+    });
+
+    it.each(['jackpot', 'multiball', 'extraBall'] as const)(
+        '%s draws lit dots and changes between frames',
+        kind => {
+            const a = new DotMatrix();
+            const b = new DotMatrix();
+            drawAnimationFrame(a, kind, 6, 'JACKPOT');
+            drawAnimationFrame(b, kind, 9, 'JACKPOT');
+            expect(litCount(a)).toBeGreaterThan(0);
+            expect(a.dots).not.toEqual(b.dots);
+        }
+    );
+
+    it('plays on a trigger message, advances with dt, then returns to normal', () => {
+        const display = new DmdDisplay();
+        display.update({ ...base, text: 'BALL 1' });
+        expect(display.activeAnimation).toBeNull();
+
+        display.update({ ...base, text: 'JACKPOT' });
+        expect(display.activeAnimation).toBe('jackpot');
+        expect(display.update({ ...base, text: 'JACKPOT' }, 0.01)).toBe(false);
+        expect(display.update({ ...base, text: 'JACKPOT' }, 0.2)).toBe(true);
+
+        display.update({ ...base, text: 'JACKPOT' }, animationDuration('jackpot'));
+        expect(display.activeAnimation).toBeNull();
+
+        const plain = new DotMatrix();
+        drawDmdState(plain, { ...base, text: 'JACKPOT' });
+        expect(display.matrix.dots).toEqual(plain.dots);
+    });
+
+    it('a new message interrupts a running animation', () => {
+        const display = new DmdDisplay();
+        display.update({ ...base, text: 'MULTIBALL' });
+        expect(display.activeAnimation).toBe('multiball');
+        display.update({ ...base, text: 'BALL SAVED' }, 0.1);
+        expect(display.activeAnimation).toBeNull();
     });
 });
