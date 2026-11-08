@@ -12,6 +12,7 @@ import { PLAYFIELD } from '@/table/playfield';
 import { GameDriver } from '@/game-driver';
 import { ActionState } from '@/input/actions';
 import { handleKey } from '@/input/keyboard';
+import { attachTouch } from '@/input/touch';
 
 const canvas = document.getElementById('game');
 if (!(canvas instanceof HTMLCanvasElement)) {
@@ -54,6 +55,7 @@ function onKey(down: boolean, e: KeyboardEvent): void {
 }
 window.addEventListener('keydown', e => onKey(true, e));
 window.addEventListener('keyup', e => onKey(false, e));
+attachTouch(canvas, actions);
 
 function resize(): void {
     const { clientWidth: w, clientHeight: h } = canvas as HTMLCanvasElement;
