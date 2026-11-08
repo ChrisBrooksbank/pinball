@@ -30,8 +30,34 @@ interface MovingSurface {
     surfaceVelocity(point: Vec2): Vec2;
 }
 
+/** Scoring element a collider belongs to; hits on it emit events (and may kick the ball). */
+interface Element {
+    kind: 'bumper' | 'slingshot' | 'target';
+    id: string;
+    /** Minimum outward speed (m/s) given to the ball along the contact normal. */
+    kick: number;
+}
+
 interface WallSegment extends Segment {
     surface: SurfaceType;
+    element?: Element;
+}
+
+interface PopBumper {
+    center: Vec2;
+    radius: number;
+    element: Element;
+}
+
+/** A spinning gate the ball passes through; crossing it sets the spin rate. */
+interface Spinner extends Segment {
+    id: string;
+    /** Spin rate in rad/s (signed by crossing direction). */
+    angularVelocity: number;
+    /** Spin added per m/s of ball speed across the gate (rad/s per m/s). */
+    gain: number;
+    /** Fraction of spin lost per second. */
+    damping: number;
 }
 
 interface WallArc extends Arc {
@@ -83,6 +109,8 @@ export class World {
     readonly arcs: WallArc[] = [];
     readonly flippers: Flipper[] = [];
     readonly plungers: Plunger[] = [];
+    readonly bumpers: PopBumper[] = [];
+    readonly spinners: Spinner[] = [];
     readonly config: WorldConfig;
     readonly events = new EventQueue();
     /** Per-surface material constants; mutable so a tuning panel can adjust them live. */
@@ -108,6 +136,41 @@ export class World {
         const plunger = new Plunger(config);
         this.plungers.push(plunger);
         return plunger;
+    }
+
+    addBumper(id: string, center: Vec2, radius: number, kick = 3): PopBumper {
+        const bumper = { center, radius, element: { kind: 'bumper' as const, id, kick } };
+        this.bumpers.push(bumper);
+        return bumper;
+    }
+
+    /** Rubber kicker along a segment that pushes the ball away from its face. */
+    addSlingshot(id: string, a: Vec2, b: Vec2, kick = 3): WallSegment {
+        const wall: WallSegment = {
+            a,
+            b,
+            surface: 'rubber',
+            element: { kind: 'slingshot', id, kick },
+        };
+        this.segments.push(wall);
+        return wall;
+    }
+
+    addTarget(id: string, a: Vec2, b: Vec2): WallSegment {
+        const wall: WallSegment = {
+            a,
+            b,
+            surface: 'target',
+            element: { kind: 'target', id, kick: 0 },
+        };
+        this.segments.push(wall);
+        return wall;
+    }
+
+    addSpinner(id: string, a: Vec2, b: Vec2, gain = 40, damping = 1.5): Spinner {
+        const spinner = { id, a, b, angularVelocity: 0, gain, damping };
+        this.spinners.push(spinner);
+        return spinner;
     }
 
     addBall(pos: Vec2, vel: Vec2 = vec2(), radius = 0.027): Ball {
@@ -143,7 +206,37 @@ export class World {
             ball.vel = add(ball.vel, scale(g, dt));
             this.resolveFlipperPenetration(ball, dt);
             this.resolvePlungerPenetration(ball, dt);
+            this.checkSpinners(ball, dt);
             this.moveBall(ball, dt);
+        }
+        for (const sp of this.spinners) {
+            sp.angularVelocity *= Math.max(0, 1 - sp.damping * dt);
+        }
+    }
+
+    /** Detect the ball centre crossing a spinner this step and spin it up in proportion to speed. */
+    private checkSpinners(ball: Ball, dt: number): void {
+        const d = scale(ball.vel, dt);
+        for (const sp of this.spinners) {
+            const ex = sp.b.x - sp.a.x;
+            const ey = sp.b.y - sp.a.y;
+            const denom = d.x * ey - d.y * ex;
+            if (denom === 0) continue;
+            const fx = sp.a.x - ball.pos.x;
+            const fy = sp.a.y - ball.pos.y;
+            const t = (fx * ey - fy * ex) / denom;
+            const u = (fx * d.y - fy * d.x) / denom;
+            if (t < 0 || t >= 1 || u < 0 || u > 1) continue;
+            const len = Math.hypot(ex, ey);
+            // Velocity component across the gate, signed by which way the ball crosses.
+            const across = (ball.vel.x * ey - ball.vel.y * ex) / len;
+            sp.angularVelocity = across * sp.gain;
+            this.events.push({
+                type: 'spinnerSpin',
+                id: sp.id,
+                ballId: this.balls.indexOf(ball),
+                angularVelocity: sp.angularVelocity,
+            });
         }
     }
 
@@ -153,11 +246,13 @@ export class World {
             const d = scale(ball.vel, remaining);
             let best: SweepHit | null = null;
             let bestSurface: SurfaceType = 'wall';
+            let bestElement: Element | null = null;
             for (const seg of this.segments) {
                 const hit = sweepCircleSegment(ball.pos, d, ball.radius, seg);
                 if (hit && (!best || hit.t < best.t)) {
                     best = hit;
                     bestSurface = seg.surface;
+                    bestElement = seg.element ?? null;
                 }
             }
             for (const arc of this.arcs) {
@@ -165,6 +260,7 @@ export class World {
                 if (hit && (!best || hit.t < best.t)) {
                     best = hit;
                     bestSurface = arc.surface;
+                    bestElement = null;
                 }
             }
             let hitMover: MovingSurface | null = null;
@@ -183,6 +279,7 @@ export class World {
                     if (hit && (!best || hit.t < best.t)) {
                         best = hit;
                         bestSurface = 'flipper';
+                        bestElement = null;
                         hitMover = flipper;
                     }
                 }
@@ -192,7 +289,20 @@ export class World {
                 if (hit && (!best || hit.t < best.t)) {
                     best = hit;
                     bestSurface = 'plunger';
+                    bestElement = null;
                     hitMover = plunger;
+                }
+            }
+            for (const bumper of this.bumpers) {
+                const hit = sweepCircleSegment(ball.pos, d, ball.radius + bumper.radius, {
+                    a: bumper.center,
+                    b: bumper.center,
+                });
+                if (hit && (!best || hit.t < best.t)) {
+                    best = hit;
+                    bestSurface = 'bumper';
+                    bestElement = bumper.element;
+                    hitMover = null;
                 }
             }
             if (!best) {
@@ -201,8 +311,28 @@ export class World {
             }
             // Stop at the contact point, nudged off the surface to avoid re-detecting it.
             ball.pos = add(add(ball.pos, scale(d, best.t)), scale(best.normal, CONTACT_SKIN));
+            const impact = -(ball.vel.x * best.normal.x + ball.vel.y * best.normal.y);
             this.resolveContact(ball, best.normal, bestSurface, dt, hitMover);
+            if (bestElement && impact > 0) this.hitElement(ball, best.normal, bestElement, impact);
             remaining *= 1 - best.t;
+        }
+    }
+
+    /** Apply an element's kick and emit its event. `impact` is the approach speed into the surface. */
+    private hitElement(ball: Ball, normal: Vec2, element: Element, impact: number): void {
+        const out = ball.vel.x * normal.x + ball.vel.y * normal.y;
+        if (out < element.kick) ball.vel = add(ball.vel, scale(normal, element.kick - out));
+        const ballId = this.balls.indexOf(ball);
+        switch (element.kind) {
+            case 'bumper':
+                this.events.push({ type: 'bumperHit', id: element.id, ballId, speed: impact });
+                break;
+            case 'slingshot':
+                this.events.push({ type: 'slingshot', id: element.id, ballId, speed: impact });
+                break;
+            case 'target':
+                this.events.push({ type: 'targetHit', id: element.id, ballId });
+                break;
         }
     }
 
