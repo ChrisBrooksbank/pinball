@@ -5,6 +5,7 @@ import { InitialsEntry } from '@core/initials';
 import { Music } from '@/audio/music';
 import { Sfx } from '@/audio/sfx';
 import { FixedStepper } from '@core/loop';
+import { PauseClock } from '@core/pause';
 import { createDebugPanel } from '@/debug-panel';
 import { TableSim } from '@physics/table-sim';
 import { applyCameraFraming } from '@render/camera';
@@ -141,10 +142,15 @@ window.addEventListener('resize', resize);
 resize();
 
 const stepper = new FixedStepper(1 / 1000);
-let last = performance.now();
+const clock = new PauseClock(performance.now());
+document.addEventListener('visibilitychange', () => {
+    clock.setHidden(document.hidden, performance.now());
+    canvas.dataset.paused = String(clock.paused);
+    if (clock.paused) music.stop();
+});
 renderer.setAnimationLoop(now => {
-    const frame = Math.min((now - last) / 1000, 0.1);
-    last = now;
+    if (clock.paused) return;
+    const frame = clock.tick(now);
     gamepad.poll(pads());
     stepper.advance(frame, () => {
         sandbox.step(1 / 1000);

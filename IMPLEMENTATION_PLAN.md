@@ -124,7 +124,7 @@ diameters, outlane/inlane gap ~1.5 balls, lane guides 2-3 balls wide).
 - [x] High-score storage (localStorage top 10, injectable storage) with unit tests (spec: presentation.md)
 - [x] Initials entry UI on game over (spec: presentation.md)
 - [x] Attract mode: idle demo play and high-score screen (spec: presentation.md)
-- [ ] Pause on tab hide; verify no console errors on mobile-chrome and chromium (spec: presentation.md)
+- [x] Pause on tab hide; verify no console errors on mobile-chrome and chromium (spec: presentation.md)
 - [ ] Deploy/CI check: Linux Playwright baselines, README update (spec: presentation.md)
 
 ## Completed

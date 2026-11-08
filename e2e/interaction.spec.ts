@@ -29,6 +29,32 @@ test.describe('Core interactions', () => {
     });
 });
 
+test.describe('Pause on tab hide', () => {
+    test('pauses when hidden, resumes when visible, without console errors', async ({ page }) => {
+        const errors: string[] = [];
+        page.on('console', msg => {
+            if (msg.type() === 'error') errors.push(msg.text());
+        });
+        page.on('pageerror', err => errors.push(err.message));
+
+        await page.goto('/');
+        const canvas = page.locator('canvas#game');
+        const setHidden = (hidden: boolean) =>
+            page.evaluate(h => {
+                Object.defineProperty(document, 'hidden', { configurable: true, value: h });
+                document.dispatchEvent(new Event('visibilitychange'));
+            }, hidden);
+
+        await setHidden(true);
+        await expect(canvas).toHaveAttribute('data-paused', 'true');
+        await setHidden(false);
+        await expect(canvas).toHaveAttribute('data-paused', 'false');
+        await page.waitForTimeout(200);
+
+        expect(errors).toEqual([]);
+    });
+});
+
 test.describe('Flipper input', () => {
     test('flipper key triggers the flipper action', async ({ page }) => {
         await page.goto('/');
