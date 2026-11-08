@@ -1,5 +1,6 @@
 import { ACESFilmicToneMapping, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
 import { HighScores } from '@core/highscores';
+import { InitialsEntry } from '@core/initials';
 import { Music } from '@/audio/music';
 import { Sfx } from '@/audio/sfx';
 import { FixedStepper } from '@core/loop';
@@ -51,6 +52,39 @@ document.body.appendChild(status);
 
 const highScores = new HighScores(typeof localStorage === 'undefined' ? null : localStorage);
 let wasGameOver = false;
+let entry: InitialsEntry | null = null;
+let entryScore = 0;
+const entryOverlay = document.createElement('div');
+entryOverlay.style.cssText =
+    'position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;' +
+    'background:rgba(0,0,0,0.75);color:#ff0;font:bold 28px monospace;white-space:pre;text-align:center;pointer-events:none';
+document.body.appendChild(entryOverlay);
+function renderEntry(): void {
+    entryOverlay.style.display = entry ? 'flex' : 'none';
+    if (entry) {
+        entryOverlay.textContent = `NEW HIGH SCORE
+${entryScore}
+
+${entry.display}
+
+FLIPPERS: CHANGE   START: OK`;
+    }
+}
+/** Route an action to the initials entry while it is open; returns true when consumed. */
+function entryAction(action: string, down: boolean): boolean {
+    if (!entry) return false;
+    if (!down) return true;
+    if (action === 'flipperLeft') entry.cycle(-1);
+    else if (action === 'flipperRight') entry.cycle(1);
+    else if (action === 'start' || action === 'plunger') {
+        if (entry.confirm()) {
+            highScores.add(entry.value, entryScore);
+            entry = null;
+        }
+    }
+    renderEntry();
+    return true;
+}
 
 const sfx = new Sfx(() => new AudioContext());
 const music = new Music(() => sfx.output);
@@ -60,6 +94,7 @@ window.addEventListener('keydown', unlockAudio);
 
 const actions = new ActionState((action, down) => {
     canvas.dataset[action] = down ? 'down' : 'up'; // observable by e2e tests
+    if (entryAction(action, down)) return;
     if (down && (action === 'flipperLeft' || action === 'flipperRight')) sfx.play('flipper');
     if (action === 'flipperLeft') for (const f of sandbox.flippersFor('left')) f.setHeld(down);
     else if (action === 'flipperRight')
@@ -116,7 +151,11 @@ renderer.setAnimationLoop(now => {
     else music.start();
     music.update();
     const isGameOver = game.rules.phase === 'gameOver';
-    if (isGameOver && !wasGameOver) highScores.add('AAA', game.rules.score); // initials UI comes next
+    if (isGameOver && !wasGameOver && highScores.qualifies(game.rules.score)) {
+        entry = new InitialsEntry();
+        entryScore = game.rules.score;
+        renderEntry();
+    }
     wasGameOver = isGameOver;
     status.textContent = `${game.displayText}  ${game.rules.score}`;
     dmd.update(
